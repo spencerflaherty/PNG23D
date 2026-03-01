@@ -1,0 +1,6 @@
+# Generated single-card STLs land here:
+#   layer1_purple.stl
+#   layer2_cyan.stl
+#   layer3_pink.stl
+#
+# Run: python png_to_stl.py --batch

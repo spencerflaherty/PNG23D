@@ -1,0 +1,5 @@
+numpy
+Pillow
+numpy-stl
+scipy
+flask
