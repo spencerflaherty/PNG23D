@@ -1,0 +1,3891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNG23D — Multi-Color STL Generator</title>
+<link rel="icon" type="image/png" href="./favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>if (localStorage.getItem("appTheme") === "classic") document.documentElement.dataset.theme = "classic";</script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --frame-border: #ff00bb;
+  --frame-shadow: rgba(255, 0, 187, 0.35);
+  --header-bg: #2a0036;
+  --bg: #1a0022;
+  --surface: #1a0022;
+  --surface2: #220030;
+  --border: rgba(255, 0, 187, 0.2);
+  --border-bright: #ff00bb;
+  --accent: #ff00bb;
+  --accent-hover: #ff44cc;
+  --cyan: #00ffff;
+  --danger: #ff4444;
+  --success: #00ffaa;
+  --text: #00ffff;
+  --text-muted: rgba(0, 255, 255, 0.5);
+  --radius: 4px;
+  --gap: 14px;
+}
+
+body.classic-theme {
+  --frame-border: #555555;
+  --frame-shadow: rgba(0, 0, 0, 0.4);
+  --header-bg: #1a1a1a;
+  --bg: #000000;
+  --surface: #0d0d0d;
+  --surface2: #141414;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-bright: #555555;
+  --accent: #ffffff;
+  --accent-hover: #cccccc;
+  --cyan: #ffffff;
+  --danger: #ff5555;
+  --success: #aaaaaa;
+  --text: #e0e0e0;
+  --text-muted: rgba(255, 255, 255, 0.45);
+}
+
+body.classic-theme .light.red,
+body.classic-theme .light.yellow,
+body.classic-theme .light.green { background-color: #555; }
+body.classic-theme .theme-toggle { background-color: #444; }
+body.classic-theme .toggle-knob { transform: translateX(14px); }
+body.classic-theme .btn-generate { color: #000; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  padding: 6px 14px 28px;
+}
+
+.site-logo-wrap {
+  text-align: center;
+  margin: 0 auto 14px;
+}
+
+.site-logo {
+  width: 223px;
+  height: 180px;
+  opacity: 0.92;
+}
+
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 20px auto 0;
+  padding: 0 14px;
+}
+
+.site-footer-link {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+
+.site-footer-link:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.site-footer-sep {
+  font-size: 0.72rem;
+  color: var(--border-bright);
+  opacity: 0.3;
+}
+
+.app-window {
+  max-width: 800px;
+  margin: 0 auto;
+  border-radius: 10px;
+  border: 2px solid var(--frame-border);
+  box-shadow: 0 0 20px var(--frame-shadow), 0 10px 40px rgba(0,0,0,0.6);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.window-titlebar {
+  background: var(--header-bg);
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid var(--frame-border);
+  position: relative;
+  min-height: 40px;
+}
+
+.traffic-lights { display: flex; gap: 8px; z-index: 2; flex-shrink: 0; }
+.light { width: 12px; height: 12px; border-radius: 50%; }
+.light.red    { background: #ff5f56; }
+.light.yellow { background: #ffbd2e; }
+.light.green  { background: #27c93f; }
+
+.window-title {
+  position: absolute;
+  left: 0; right: 0;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.titlebar-actions {
+  position: absolute;
+  right: 15px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggle-label { font-size: 11px; color: var(--accent); opacity: 0.7; }
+
+.theme-toggle {
+  width: 34px; height: 20px;
+  background-color: #ff00bb;
+  border: none; border-radius: 10px;
+  cursor: pointer; position: relative;
+  transition: background-color 0.3s;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+}
+
+.toggle-knob {
+  width: 16px; height: 16px;
+  background: #fff; border-radius: 50%;
+  position: absolute; top: 2px; left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.stepper {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.step:hover { opacity: 0.75; }
+.step.active { opacity: 1; }
+.step.complete { opacity: 0.85; }
+
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.step.active .step-num {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(255, 0, 187, 0.12);
+  box-shadow: 0 0 10px rgba(255, 0, 187, 0.35);
+}
+
+.step.complete .step-num {
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(0, 255, 170, 0.08);
+}
+
+.step-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.step.active .step-label { color: var(--accent); }
+.step.complete .step-label { color: var(--text); }
+
+.step-connector {
+  width: 42px;
+  height: 1px;
+  background: var(--border);
+}
+
+main {
+  padding: 20px;
+  background: var(--surface);
+}
+
+.stage { display: none; }
+.stage.active {
+  display: block;
+  animation: dialupReveal 0.4s steps(20) forwards;
+}
+
+@keyframes dialupReveal {
+  0%   { clip-path: inset(0 0 100% 0); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { clip-path: inset(0 0 0% 0); opacity: 1; }
+}
+
+@keyframes blockBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.stage-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.stage-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 auto 30px;
+  max-width: 720px;
+  line-height: 1.7;
+  display: block;
+}
+
+.start-grid {
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.start-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-name-shell {
+  position: relative;
+}
+
+.project-name-shell.cursor-ready .project-name-input {
+  caret-color: transparent;
+}
+
+.project-name-shell.cursor-ready .project-name-cursor {
+  display: inline-block;
+}
+
+.project-name-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.project-name-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  display: none;
+}
+
+.project-name-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 12px 14px;
+  caret-color: #ffffff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.project-name-cursor {
+  display: none;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 10px;
+  height: 1.1em;
+  background-color: #ffffff;
+  transform: translateY(-50%);
+  animation: blockBlink 1s step-end infinite;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  pointer-events: none;
+}
+
+.project-name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 0, 187, 0.18);
+}
+
+.project-name-input.invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.18);
+}
+
+.start-primary {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 18px;
+  font-size: 0.82rem;
+}
+
+.start-panel-note {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: none;
+}
+
+.choice-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.choice-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,0,187,0.08), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.choice-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 0, 187, 0.25);
+}
+
+.choice-card:hover::before { opacity: 1; }
+
+.choice-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: rgba(255, 0, 187, 0.06);
+  position: relative;
+  z-index: 1;
+}
+
+.choice-card.drag-over {
+  border-color: var(--cyan);
+  background: rgba(0, 255, 255, 0.04);
+}
+.choice-card.drag-over .choice-icon {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.choice-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.choice-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+}
+
+.choice-footnote {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  position: relative;
+  z-index: 1;
+  display: none;
+}
+
+.choice-card.import-dropzone {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.settings-wrap {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-row {
+  background:
+    linear-gradient(180deg, rgba(255,0,187,0.05), transparent 34%),
+    var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.setting-row h3 {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 0;
+}
+
+.setting-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.setting-copy {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-top: 6px;
+}
+
+.setting-row .setting-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  display: none;
+}
+
+.dim-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dim-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.dim-row input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.dim-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 0, 187, 0.18);
+}
+
+.pill-group { display: flex; gap: 8px; }
+.pill-group.wrap { flex-wrap: wrap; }
+
+.pill {
+  flex: 1;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.pill:hover { border-color: var(--accent); color: var(--text); }
+.pill.active {
+  border-color: var(--accent);
+  background: rgba(255, 0, 187, 0.12);
+  color: var(--accent);
+  box-shadow: 0 0 8px rgba(255, 0, 187, 0.2);
+}
+
+.pill .pill-sub {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pill.active .pill-sub { color: var(--accent); opacity: 0.8; }
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  align-items: center;
+  gap: 14px;
+}
+
+.slider-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 4px;
+  cursor: pointer;
+}
+
+.slider-value {
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-ticks {
+  position: relative;
+  height: 14px;
+  margin-top: 6px;
+  width: calc(100% - 72px - 14px);
+}
+.slider-ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.quality-hint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  display: none;
+}
+
+.format-row { display: flex; gap: 8px; }
+
+.size-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.size-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.size-action-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.icon-button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  outline: none;
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 0, 187, 0.18);
+}
+
+.icon-button:active {
+  transform: translateY(1px);
+}
+
+.icon-button.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(255, 0, 187, 0.12);
+  box-shadow: 0 0 10px rgba(255, 0, 187, 0.18);
+}
+
+.size-status {
+  font-size: 0.7rem;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.size-meta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.size-meta.size-meta-2 {
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr);
+}
+
+.size-meta-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.size-meta-label {
+  display: block;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+}
+
+.size-meta-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.size-meta-value {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dimension-shell {
+  position: relative;
+}
+
+.dimension-link {
+  position: absolute;
+  left: calc(50% - 1px);
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--border), transparent);
+  pointer-events: none;
+}
+
+.dimension-input-card {
+  position: relative;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent), var(--surface);
+}
+
+.dimension-input-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dimension-unit {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+}
+
+.helper-dropzone {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.helper-dropzone .choice-icon {
+  font-size: 1.35rem;
+}
+
+.inline-dropzone {
+  min-height: 74px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+}
+
+.inline-dropzone .choice-title,
+.inline-dropzone .choice-desc,
+.inline-dropzone .choice-footnote {
+  text-align: left;
+}
+
+.inline-dropzone .choice-title {
+  margin-bottom: 2px;
+  font-size: 0.76rem;
+}
+
+.inline-dropzone .choice-footnote {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: 0;
+  font-size: 0.62rem;
+}
+
+.size-meta-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.94rem;
+  padding: 10px 12px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.size-meta-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 0, 187, 0.18);
+}
+
+.arrange-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.arrange-single {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.layer-stack-section h3 {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.preview-top-row {
+  position: relative;
+}
+
+.preview-empty {
+  width: 100%;
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  border-radius: 10px;
+  background: #111318;
+  border: 1px dashed var(--border);
+  text-align: center;
+  padding: 16px;
+}
+
+.preview-empty-glyph {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.6rem;
+  color: var(--text-muted);
+  opacity: 0.55;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.preview-empty-hint {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.arrange-col h3 {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.arrange-col h3 .subtle {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px;
+}
+
+.layer-item {
+  background:
+    linear-gradient(180deg, rgba(255,0,187,0.06), transparent 28%),
+    var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  cursor: grab;
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.layer-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.layer-item:active { cursor: grabbing; }
+.layer-item:hover { border-color: var(--accent); }
+.layer-item.dragging { opacity: 0.4; }
+.layer-item.drag-over { border-color: var(--cyan); box-shadow: 0 0 8px rgba(0,255,255,0.25); }
+
+.layer-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 10px;
+}
+
+.layer-control {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(0,0,0,0.14);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.layer-print-layers-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.layer-printlayers {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.layer-printlayers:focus { outline: none; border-color: var(--accent); }
+
+.ps-unit {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.preview-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 8px;
+}
+
+.preview-stats .ps-cell:nth-child(-n+3) { grid-column: span 4; }
+.preview-stats .ps-cell:nth-child(n+4) { grid-column: span 3; }
+
+@media (max-width: 620px) {
+  .preview-stats { grid-template-columns: repeat(2, 1fr); }
+  .preview-stats .ps-cell:nth-child(-n+3),
+  .preview-stats .ps-cell:nth-child(n+4) { grid-column: span 1; }
+}
+
+.ps-cell {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ps-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.56rem;
+  white-space: nowrap;
+}
+
+.ps-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ps-value {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-control-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.layer-control-artwork {
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.layer-control-artwork:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.layer-control-artwork.drag-over {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0,255,255,0.2);
+}
+
+.layer-artwork-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.layer-artwork-file {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-control input[type="number"] {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 8px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-control input[type="number"]:focus { outline: none; border-color: var(--accent); }
+
+.layer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.layer-actions-left,
+.layer-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.layer-inlay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 30px;
+  background: linear-gradient(180deg, rgba(255,0,187,0.05), rgba(255,0,187,0.02));
+  border: 1px dashed rgba(255, 0, 187, 0.35);
+  border-radius: 10px;
+  position: relative;
+}
+body.classic-theme .layer-inlay { border-color: rgba(255, 255, 255, 0.22); }
+
+.layer-inlay::before {
+  content: "↳";
+  position: absolute;
+  left: 8px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.layer-inlay .inlay-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.layer-inlay .inlay-file {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  padding: 5px 9px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+.layer-inlay .inlay-file:hover { border-color: var(--accent); color: var(--text); }
+.layer-inlay .inlay-file.has-file { color: var(--success); border-color: var(--success); border-style: solid; }
+
+.layer-inlay .inlay-color {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 2px;
+  background: var(--surface2);
+}
+
+.layer-inlay .inlay-remove {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  width: 22px; height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.layer-inlay .inlay-remove:hover { border-color: var(--danger); color: var(--danger); }
+
+.layer-file {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  min-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.layer-file:hover { border-color: var(--accent); color: var(--text); }
+.layer-file.has-file { color: var(--success); border-color: var(--success); border-style: solid; }
+
+.add-inlay-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.add-inlay-btn:hover { border-color: var(--accent); color: var(--accent); }
+.add-inlay-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255, 0, 187, 0.1); }
+
+.layer-flip-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.layer-flip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.layer-flip-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255, 0, 187, 0.1); }
+
+.drag-handle {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  user-select: none;
+  padding: 0 4px;
+}
+
+.layer-thumb {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background-color: #111;
+  background-image:
+    linear-gradient(45deg, #222 25%, transparent 25%),
+    linear-gradient(-45deg, #222 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #222 75%),
+    linear-gradient(-45deg, transparent 75%, #222 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.layer-thumb .layer-swatch {
+  position: absolute;
+  inset: 0;
+  opacity: 0.85;
+}
+
+.layer-thumb canvas, .layer-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+}
+
+.layer-thumb .layer-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.layer-thumb.has-file .layer-glyph { display: none; }
+.layer-thumb:hover { border-color: var(--accent); box-shadow: 0 0 6px rgba(255,0,187,0.25); }
+
+.layer-info { flex: 1; min-width: 0; }
+
+.layer-name {
+  font-size: 0.96rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  width: 100%;
+  padding: 2px 0;
+}
+.layer-name:focus { outline: none; border-bottom: 1px solid var(--accent); }
+
+.layer-meta {
+  font-size: 0.69rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.layer-meta .z-range { color: var(--accent); opacity: 0.75; }
+
+.layer-color {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 2px;
+  background: var(--surface);
+}
+.layer-color::-webkit-color-swatch-wrapper { padding: 0; }
+.layer-color::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+.layer-remove {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.layer-remove:hover { border-color: var(--danger); color: var(--danger); }
+
+.add-layer-btn {
+  display: block;
+  margin: 8px auto 0;
+  background: linear-gradient(180deg, rgba(255,0,187,0.12), rgba(255,0,187,0.04));
+  border: 1px solid var(--border-bright);
+  color: var(--accent);
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s;
+}
+.add-layer-btn:hover { background: rgba(255,0,187,0.16); transform: translateY(-1px); }
+
+.footer-link {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+
+.footer-link:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.help-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 120;
+}
+
+.help-modal.open {
+  display: flex;
+}
+
+.help-modal-window {
+  width: 100%;
+  max-width: 860px;
+  max-height: min(88vh, 920px);
+  overflow: auto;
+  border-radius: 10px;
+  border: 2px solid var(--frame-border);
+  box-shadow: 0 0 20px var(--frame-shadow), 0 10px 40px rgba(0,0,0,0.6);
+  background: var(--surface);
+}
+
+.help-modal-main {
+  padding: 24px 28px;
+}
+
+.help-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.help-modal-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 26px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.help-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.help-section p {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.help-step-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help-step-list li {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.7;
+  padding-left: 18px;
+  position: relative;
+}
+
+.help-step-list li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.preview-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+#preview_canvas {
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 100%;
+  height: 240px;
+  cursor: grab;
+  background: #111318;
+}
+#preview_canvas:active { cursor: grabbing; }
+
+#preview_legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.16);
+  flex-shrink: 0;
+}
+
+.preview-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.preview-stat { display: flex; flex-direction: column; gap: 2px; }
+.preview-stat-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.preview-stat-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-hint {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 8px;
+  font-style: italic;
+  display: none;
+}
+
+.nav-bar {
+  padding: 18px 28px 22px;
+  background: var(--surface);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.export-progress {
+  flex: 1 1 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.export-progress[hidden] { display: none; }
+.export-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.export-progress-label {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.export-progress-eta {
+  color: var(--text-muted);
+}
+.export-progress-track {
+  height: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.export-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #ff6aab);
+  box-shadow: 0 0 10px var(--frame-shadow);
+  transition: width 0.18s ease;
+}
+
+.nav-buttons { display: flex; gap: 10px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+}
+
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-secondary { color: var(--text-muted); border-color: var(--border); background: transparent; }
+.btn-secondary:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+
+.btn-primary { color: var(--accent); border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 10px var(--frame-shadow);
+}
+
+.btn-generate {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  padding: 10px 22px;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 12px var(--frame-shadow);
+}
+.btn-generate:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 0 20px var(--frame-shadow);
+}
+
+.btn-tertiary {
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  font-size: 0.7rem;
+}
+.btn-tertiary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(calc(100% + 48px));
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  box-shadow: 0 0 20px var(--frame-shadow);
+  transition: transform 0.3s ease-out;
+  z-index: 100;
+  max-width: 80vw;
+  opacity: 0;
+  pointer-events: none;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+.toast.error { border-color: var(--danger); color: var(--danger); }
+.toast.success { border-color: var(--success); color: var(--success); }
+
+/* ── Layer card redesign ── */
+.layer-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.layer-snap-thumb {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #111;
+  cursor: pointer;
+  display: block;
+  image-rendering: pixelated;
+}
+.layer-snap-thumb:hover { border-color: var(--accent); box-shadow: 0 0 6px rgba(255,0,187,0.25); }
+
+.layer-artwork-drop {
+  flex-shrink: 0;
+  width: 80px;
+  padding: 6px 7px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.layer-artwork-drop:hover, .layer-artwork-drop.drag-over {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.layer-artwork-drop.has-file {
+  border-color: var(--success);
+  border-style: solid;
+  color: var(--success);
+  font-size: 0.56rem;
+}
+
+.layer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.layer-thickness-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+}
+.layer-thickness-row input[type="number"] {
+  width: 80px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 5px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.layer-thickness-row input[type="number"]:focus { outline: none; border-color: var(--accent); }
+.thickness-sep { color: var(--text-muted); font-size: 0.68rem; opacity: 0.5; }
+.thickness-label { font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: rgba(255,0,187,0.35); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+@media (max-width: 620px) {
+  .arrange-grid { grid-template-columns: 1fr; }
+  .start-grid { grid-template-columns: 1fr; }
+  .step-connector { width: 20px; }
+  .step-label { display: none; }
+  .size-toolbar { flex-direction: column; align-items: stretch; }
+  .size-meta { grid-template-columns: 1fr; }
+  .setting-head { flex-direction: column; }
+  .size-status { text-align: left; }
+  .dimension-link { display: none; }
+  .layer-main { grid-template-columns: auto 1fr auto; }
+  .layer-controls { grid-template-columns: 1fr; }
+  .layer-file { min-width: 100%; }
+  .preview-canvas { min-height: 280px; }
+}
+</style>
+</head>
+<body>
+
+<div class="site-logo-wrap">
+  <img src="./logo.png" alt="Spencer Flaherty" class="site-logo">
+</div>
+
+<div class="app-window">
+
+  <div class="window-titlebar">
+    <div class="traffic-lights">
+      <span class="light red"></span>
+      <span class="light yellow"></span>
+      <span class="light green"></span>
+    </div>
+    <div class="window-title">~/PNG23D/</div>
+    <div class="titlebar-actions">
+      <span class="toggle-label">B/W</span>
+      <div class="theme-toggle" id="themeToggle"><div class="toggle-knob"></div></div>
+    </div>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <div class="step active" data-step="1">
+      <div class="step-num">1</div>
+      <div class="step-label">Start</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="2">
+      <div class="step-num">2</div>
+      <div class="step-label">Size &amp; DPI</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="3">
+      <div class="step-num">3</div>
+      <div class="step-label">Print Settings</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="4">
+      <div class="step-num">4</div>
+      <div class="step-label">Arrange Layers</div>
+    </div>
+  </div>
+
+  <main>
+
+    <section class="stage active" data-stage="1">
+      <div class="start-grid">
+        <div class="start-panel">
+          <div class="project-name-block">
+            <label class="project-name-label" for="project_name">Project Name</label>
+            <div class="project-name-shell" id="project_name_shell">
+              <input
+                type="text"
+                id="project_name"
+                class="project-name-input"
+                maxlength="80"
+                autocomplete="off"
+              >
+              <span class="project-name-cursor" id="project_name_cursor"></span>
+            </div>
+            <p class="project-name-hint">A project name is required before you can create a new project.</p>
+          </div>
+          <button class="btn btn-primary start-primary" id="choice_new">New Project</button>
+        </div>
+        <div class="choice-card import-dropzone" id="choice_import" tabindex="0">
+          <div class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="choice-title">Drop .3dp Project File</div>
+          <input type="file" id="import_file" accept=".3dp" hidden>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="2">
+      <h2 class="stage-title">// Size &amp; DPI</h2>
+      <div class="settings-wrap">
+
+        <div class="setting-row">
+          <div class="setting-head">
+            <div>
+              <h3>Presets</h3>
+            </div>
+          </div>
+          <div class="pill-group wrap" id="size_preset_pills">
+            <button class="pill active" data-preset="business_card">US Business Card <span class="pill-sub">85.725 × 53.975 mm</span></button>
+            <button class="pill" data-preset="50x50">50 × 50 <span class="pill-sub">small square</span></button>
+            <button class="pill" data-preset="100x100">100 × 100 <span class="pill-sub">medium square</span></button>
+            <button class="pill" data-preset="235x235">235 × 235 <span class="pill-sub">full plate</span></button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-head">
+            <div>
+              <h3>Physical Dimensions</h3>
+            </div>
+          </div>
+          <div class="size-toolbar">
+            <div class="size-actions">
+              <input type="checkbox" id="lock_proportions" class="sr-only" checked>
+              <button type="button" class="icon-button active" id="lock_proportions_btn" aria-label="Lock proportions" aria-pressed="true" title="Unlock proportions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="5" y="11" width="14" height="9" rx="2"></rect>
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                </svg>
+              </button>
+              <button type="button" class="icon-button" id="swap_dimensions_btn" aria-label="Swap width and height" title="Swap width and height">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M7 7h10"></path>
+                  <path d="M13 3l4 4-4 4"></path>
+                  <path d="M17 17H7"></path>
+                  <path d="M11 21l-4-4 4-4"></path>
+                </svg>
+              </button>
+              <span class="size-action-label">Link / swap</span>
+            </div>
+            <span class="size-status" id="dimension_status">Preset: US Business Card</span>
+          </div>
+          <div class="dimension-shell">
+            <div class="dimension-link" aria-hidden="true"></div>
+            <div class="dim-row">
+              <label class="dimension-input-card">
+                <span class="dimension-input-top"><span>Width</span><span class="dimension-unit">mm</span></span>
+                <input type="number" id="card_width" value="85.725" step="0.001" min="1">
+              </label>
+              <label class="dimension-input-card">
+                <span class="dimension-input-top"><span>Height</span><span class="dimension-unit">mm</span></span>
+                <input type="number" id="card_height" value="53.975" step="0.001" min="1">
+              </label>
+            </div>
+          </div>
+          <div class="size-meta size-meta-2">
+            <div class="size-meta-card">
+              <span class="size-meta-label">Reference PNG</span>
+              <div class="choice-card inline-dropzone" id="size_helper_dropzone" tabindex="0">
+                <div class="choice-title" id="reference_png_readout">Drop or click to load PNG</div>
+                <div class="choice-footnote" id="size_helper_footnote">Optional: use pixel dimensions plus DPI to set width and height automatically.</div>
+                <input type="file" id="size_helper_file" accept=".png,image/png" hidden>
+              </div>
+            </div>
+            <div class="size-meta-card">
+              <span class="size-meta-label">Reference DPI</span>
+              <input type="number" id="reference_dpi_input" class="size-meta-input" min="1" step="1" placeholder="300">
+              <span class="size-meta-value" id="reference_dpi_readout" style="display:none"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="3">
+      <h2 class="stage-title">// Print Settings</h2>
+      <div class="settings-wrap">
+
+        <div class="setting-row">
+          <h3>Nozzle Diameter</h3>
+          <div class="pill-group" id="nozzle_pills">
+            <button class="pill" data-val="0.2">0.2 <span class="pill-sub">detail</span></button>
+            <button class="pill active" data-val="0.4">0.4 <span class="pill-sub">standard</span></button>
+            <button class="pill" data-val="0.6">0.6 <span class="pill-sub">fast</span></button>
+            <button class="pill" data-val="0.8">0.8 <span class="pill-sub">bulk</span></button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <h3>Layer Height</h3>
+          <div class="slider-row">
+            <input type="range" id="layer_slider" min="0.05" max="0.32" step="0.01" value="0.20">
+            <span class="slider-value" id="layer_value">0.20 mm</span>
+          </div>
+          <div class="slider-ticks" id="layer_ticks"></div>
+        </div>
+
+        <div class="setting-row">
+          <h3>Quality</h3>
+          <div class="slider-row">
+            <input type="range" id="quality_slider" min="10" max="100" step="5" value="50">
+            <span class="slider-value"><span id="quality_pct">50</span>%</span>
+          </div>
+          <div class="slider-ticks" id="quality_ticks"></div>
+          <p class="quality-hint" id="quality_hint"><strong id="quality_label" style="color:var(--accent);font-weight:700;">Maximum</strong> · largest files, slowest to generate.</p>
+        </div>
+
+        <div class="setting-row">
+          <h3>Alpha Threshold</h3>
+          <div class="slider-row">
+            <input type="range" id="threshold_slider" min="0" max="255" step="1" value="128">
+            <span class="slider-value"><span id="threshold_value">128</span></span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="stage" data-stage="4">
+      <h2 class="stage-title">// Arrange Layers</h2>
+      <div class="arrange-single">
+
+        <div class="preview-panel">
+          <div class="preview-top-row">
+            <canvas id="preview_canvas"></canvas>
+            <div id="preview_empty" class="preview-empty">
+              <div class="preview-empty-glyph">[ + ]</div>
+              <div>Add a layer to get started.</div>
+              <div class="preview-empty-hint">// preview will render here</div>
+            </div>
+          </div>
+          <div class="preview-stats">
+            <div class="ps-cell">
+              <span class="ps-label">Card</span>
+              <div class="ps-value-row"><span class="ps-value" id="ps_card">—</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Total Height</span>
+              <div class="ps-value-row"><span class="ps-value" id="preview_height">0.00</span><span class="ps-unit">mm</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Layers</span>
+              <div class="ps-value-row"><span class="ps-value" id="preview_count">0</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Nozzle</span>
+              <div class="ps-value-row"><span class="ps-value" id="preview_nozzle">0.4</span><span class="ps-unit">mm</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Layer H</span>
+              <div class="ps-value-row"><span class="ps-value" id="ps_layerh">0.20</span><span class="ps-unit">mm</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Alpha</span>
+              <div class="ps-value-row"><span class="ps-value" id="ps_alpha">128</span></div>
+            </div>
+            <div class="ps-cell">
+              <span class="ps-label">Quality</span>
+              <div class="ps-value-row"><span class="ps-value" id="ps_quality">50%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="layer-stack-section">
+          <h3>Layer Stack</h3>
+          <div class="layer-list" id="layer_list"></div>
+          <button class="add-layer-btn" id="add_layer_btn">+ Add Layer</button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div class="nav-bar">
+    <button class="btn btn-secondary" id="back_btn" disabled>← Back</button>
+    <button class="btn btn-generate" id="next_btn" style="display:none;">Next →</button>
+    <button class="btn btn-generate" id="generate_btn" style="display:none;">Download 3MF + 3DP</button>
+    <div class="export-progress" id="export_progress" hidden>
+      <div class="export-progress-meta">
+        <span class="export-progress-label" id="export_progress_label">Generating…</span>
+        <span class="export-progress-eta" id="export_progress_eta">estimating…</span>
+      </div>
+      <div class="export-progress-track"><div class="export-progress-fill" id="export_progress_fill"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <a href="#" class="site-footer-link" id="help_link">? Help &amp; Documentation</a>
+  <span class="site-footer-sep">|</span>
+  <a href="https://spencerflaherty.com" target="_blank" rel="noopener" class="site-footer-link">Spencer Flaherty 2026</a>
+</footer>
+
+<div class="help-modal" id="help_modal" aria-hidden="true">
+  <div class="help-modal-window">
+    <div class="window-titlebar">
+      <div class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </div>
+      <div class="window-title">~/PNG23D/Help</div>
+      <div class="titlebar-actions">
+        <a href="#" class="footer-link" id="help_close">Close</a>
+      </div>
+    </div>
+    <main class="help-modal-main">
+      <h2 class="help-modal-title">Help &amp; Documentation</h2>
+      <p class="help-modal-subtitle">The workflow is short: name the project, set physical size, choose print settings, build the layer stack, then download the 3MF and 3DP together.</p>
+
+      <section class="help-section">
+        <h3 class="help-section-title">Page 1 — Start</h3>
+        <ul class="help-step-list">
+          <li>Type the project name and start a new project, or drop in an existing <code>.3dp</code> file.</li>
+          <li>The project name drives the downloaded filenames, so keep it short and descriptive.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3 class="help-section-title">Page 2 — Size &amp; DPI</h3>
+        <ul class="help-step-list">
+          <li>Pick a preset or enter exact width and height in millimeters.</li>
+          <li>Drop a reference PNG into the Reference PNG area and set its DPI to auto-calculate physical size from pixels.</li>
+          <li>Use Lock Proportions if you want width and height to stay linked while editing.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3 class="help-section-title">Page 3 — Print Settings</h3>
+        <ul class="help-step-list">
+          <li>Choose the nozzle first. Layer height defaults to half the selected nozzle, then you can fine-tune it.</li>
+          <li>Quality controls mesh density. Lower values generate faster and keep files smaller while iterating.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3 class="help-section-title">Page 4 — Arrange Layers</h3>
+        <ul class="help-step-list">
+          <li>Top of the list is the top of the print. Drag layers to reorder them.</li>
+          <li>Each layer card controls name, color, thickness, threshold, artwork, and optional inlay artwork.</li>
+          <li>Start with a thicker base layer and keep accent layers thinner unless they need more body.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3 class="help-section-title">Downloads</h3>
+        <ul class="help-step-list">
+          <li>The final button downloads both files: the print-ready <code>.3mf</code> and the matching <code>.3dp</code> project.</li>
+          <li>Both files use the project name plus a timestamp so each download stays unique.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+
+<input type="file" id="layer_file_input" accept=".png,.svg,image/png,image/svg+xml" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+// ═══════════════════════════════════════════════
+//  State
+// ═══════════════════════════════════════════════
+
+const DEFAULT_LAYERS = () => ([]);
+
+const app = {
+  step: 1,
+  maxCompleted: 1,
+  projectName: "",
+  settings: {
+    cardWidth: 85.725,
+    cardHeight: 53.975,
+    lockAspect: true,
+    aspectRatio: 85.725 / 53.975,
+    sizePreset: "business_card",
+    referencePng: "",
+    referenceDpi: null,
+    referencePngWidthPx: null,
+    referencePngHeightPx: null,
+    nozzle: 0.4,
+    layerHeight: 0.20,
+    alphaThreshold: 128,
+    quality: 50
+  },
+  layers: DEFAULT_LAYERS(),
+  nextId: 1,
+  fileTargetCb: null  // for the global file input
+};
+
+// ═══════════════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════════════
+const toastEl = document.getElementById("toast");
+let toastTimer;
+function toast(msg, kind) {
+  toastEl.textContent = msg;
+  toastEl.className = "toast show" + (kind ? " " + kind : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3200);
+}
+
+// ═══════════════════════════════════════════════
+//  Theme
+// ═══════════════════════════════════════════════
+(function(){
+  const toggle = document.getElementById("themeToggle");
+  const html = document.documentElement;
+  if (html.dataset.theme === "classic") document.body.classList.add("classic-theme");
+  toggle.addEventListener("click", () => {
+    document.body.classList.toggle("classic-theme");
+    const classic = document.body.classList.contains("classic-theme");
+    html.dataset.theme = classic ? "classic" : "";
+    localStorage.setItem("appTheme", classic ? "classic" : "cyberpunk");
+  });
+})();
+
+// ═══════════════════════════════════════════════
+//  Step navigation
+// ═══════════════════════════════════════════════
+const stages = document.querySelectorAll(".stage");
+const steps = document.querySelectorAll(".step");
+const backBtn = document.getElementById("back_btn");
+const nextBtn = document.getElementById("next_btn");
+const generateBtn = document.getElementById("generate_btn");
+const projectNameInput = document.getElementById("project_name");
+const projectNameShell = document.getElementById("project_name_shell");
+const helpLink = document.getElementById("help_link");
+const helpClose = document.getElementById("help_close");
+const helpModal = document.getElementById("help_modal");
+
+function sanitizeProjectName(name) {
+  return (name || "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+}
+
+function setProjectName(name) {
+  app.projectName = (name || "").trim();
+  projectNameInput.value = app.projectName;
+  projectNameInput.classList.remove("invalid");
+  syncProjectNameCursor();
+}
+
+function syncProjectNameCursor() {
+  projectNameShell.classList.toggle("cursor-ready", app.step === 1 && !projectNameInput.value);
+}
+
+function focusProjectNameInput(placeCursorAtEnd = true) {
+  projectNameInput.focus();
+  if (placeCursorAtEnd) {
+    const end = projectNameInput.value.length;
+    projectNameInput.setSelectionRange(end, end);
+  }
+  syncProjectNameCursor();
+}
+
+function goToStep(n) {
+  app.step = n;
+  app.maxCompleted = Math.max(app.maxCompleted, n);
+  stages.forEach(s => s.classList.toggle("active", +s.dataset.stage === n));
+  steps.forEach(s => {
+    const sn = +s.dataset.step;
+    s.classList.toggle("active", sn === n);
+    s.classList.toggle("complete", sn < n);
+  });
+  backBtn.disabled = n === 1;
+  if (n === 1) {
+    nextBtn.style.display = "none";
+    generateBtn.style.display = "none";
+  } else if (n === 4) {
+    nextBtn.style.display = "none";
+    generateBtn.style.display = "inline-flex";
+    renderLayers();
+    renderPreview();
+  } else {
+    nextBtn.style.display = "inline-flex";
+    generateBtn.style.display = "none";
+  }
+  syncProjectNameCursor();
+  if (n === 1) requestAnimationFrame(() => focusProjectNameInput(true));
+}
+
+steps.forEach(s => {
+  s.addEventListener("click", () => {
+    const target = +s.dataset.step;
+    if (target <= app.maxCompleted) goToStep(target);
+  });
+});
+backBtn.addEventListener("click", () => { if (app.step > 1) goToStep(app.step - 1); });
+nextBtn.addEventListener("click", () => { if (app.step < 4) goToStep(app.step + 1); });
+goToStep(1);
+
+function openHelpModal() {
+  helpModal.classList.add("open");
+  helpModal.setAttribute("aria-hidden", "false");
+}
+
+function closeHelpModal() {
+  helpModal.classList.remove("open");
+  helpModal.setAttribute("aria-hidden", "true");
+}
+
+helpLink.addEventListener("click", e => {
+  e.preventDefault();
+  openHelpModal();
+});
+
+helpClose.addEventListener("click", e => {
+  e.preventDefault();
+  closeHelpModal();
+});
+
+helpModal.addEventListener("click", e => {
+  if (e.target === helpModal) closeHelpModal();
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && helpModal.classList.contains("open")) closeHelpModal();
+});
+
+// ═══════════════════════════════════════════════
+//  STEP 1 — choices
+// ═══════════════════════════════════════════════
+function startNewProject() {
+  const projectName = projectNameInput.value.trim();
+  if (!projectName) {
+    projectNameInput.classList.add("invalid");
+    projectNameInput.focus();
+    toast("Enter a project name before creating a new project.", "error");
+    return;
+  }
+  setProjectName(projectName);
+  app.layers = DEFAULT_LAYERS();
+  app.nextId = app.layers.length + 1;
+  app.settings.cardWidth = 85.725;
+  app.settings.cardHeight = 53.975;
+  app.settings.lockAspect = true;
+  app.settings.aspectRatio = 85.725 / 53.975;
+  app.settings.sizePreset = "business_card";
+  app.settings.referencePng = "";
+  app.settings.referenceDpi = null;
+  app.settings.nozzle = 0.4;
+  app.settings.layerHeight = 0.20;
+  app.settings.alphaThreshold = 128;
+  app.settings.quality = 50;
+  syncSettingsToUI();
+  goToStep(2);
+}
+projectNameInput.addEventListener("input", () => {
+  if (projectNameInput.classList.contains("invalid") && projectNameInput.value.trim()) {
+    projectNameInput.classList.remove("invalid");
+  }
+  syncProjectNameCursor();
+});
+projectNameInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    startNewProject();
+  }
+});
+projectNameInput.addEventListener("focus", syncProjectNameCursor);
+projectNameInput.addEventListener("blur", syncProjectNameCursor);
+document.getElementById("choice_new").addEventListener("click", startNewProject);
+
+document.addEventListener("keydown", e => {
+  if (app.step !== 1) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.activeElement === projectNameInput) return;
+  if (e.key.length === 1) {
+    e.preventDefault();
+    focusProjectNameInput(false);
+    const start = projectNameInput.selectionStart ?? projectNameInput.value.length;
+    const end = projectNameInput.selectionEnd ?? projectNameInput.value.length;
+    projectNameInput.setRangeText(e.key, start, end, "end");
+    projectNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    return;
+  }
+  if (e.key === "Backspace" || e.key === "Delete") {
+    e.preventDefault();
+    focusProjectNameInput(false);
+    projectNameInput.value = projectNameInput.value.slice(0, -1);
+    projectNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+});
+
+const importCard = document.getElementById("choice_import");
+const importFile = document.getElementById("import_file");
+
+importCard.addEventListener("click", () => importFile.click());
+importCard.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); importFile.click(); }
+});
+importFile.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (f) handleImport(f);
+});
+
+["dragenter","dragover"].forEach(ev =>
+  importCard.addEventListener(ev, e => { e.preventDefault(); importCard.classList.add("drag-over"); })
+);
+["dragleave","drop"].forEach(ev =>
+  importCard.addEventListener(ev, e => { e.preventDefault(); importCard.classList.remove("drag-over"); })
+);
+importCard.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleImport(f);
+});
+
+async function handleImport(file) {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.settings || !Array.isArray(data.layers)) throw new Error("Not a valid .3dp file");
+    setProjectName(data.projectName || file.name.replace(/\.[^.]+$/, ""));
+    Object.assign(app.settings, data.settings);
+    app.settings.lockAspect = data.settings?.lockAspect !== false;
+    app.settings.aspectRatio = Number.isFinite(+data.settings?.aspectRatio) && +data.settings.aspectRatio > 0
+      ? +data.settings.aspectRatio
+      : (app.settings.cardWidth / app.settings.cardHeight);
+    app.settings.sizePreset = data.settings?.sizePreset || "custom";
+    app.settings.referencePng = data.settings?.referencePng || "";
+    app.settings.referenceDpi = Number.isFinite(+data.settings?.referenceDpi) ? +data.settings.referenceDpi : null;
+    app.settings.alphaThreshold = Number.isFinite(+data.settings?.alphaThreshold)
+      ? +data.settings.alphaThreshold
+      : Number.isFinite(+data.layers?.[0]?.threshold) ? +data.layers[0].threshold : 128;
+    app.layers = data.layers.map((L, i) => ({
+      id: i + 1,
+      name: L.name || `L${i + 1}`,
+      color: L.color || "#888888",
+      thickness: +L.thickness || 0.4,
+      file: L.file || null,
+      dataUrl: L.dataUrl || null,
+      mask: null,
+      flipX: !!L.flipX,
+      flipY: !!L.flipY,
+      inlay: L.inlay ? {
+        color: L.inlay.color || "#ff8800",
+        file: L.inlay.file || null,
+        dataUrl: L.inlay.dataUrl || null,
+        mask: null
+      } : null
+    }));
+    app.nextId = app.layers.length + 1;
+
+    // Restore decoded masks from the inlined data URLs.
+    for (const L of app.layers) {
+      if (L.dataUrl) {
+        const preview = await loadPreviewData(L.dataUrl);
+        L.imageData = preview.imageData;
+        L.width = preview.width;
+        L.height_px = preview.height_px;
+      }
+      if (L.dataUrl) L.mask = await maskFromDataUrl(L.dataUrl, app.settings.alphaThreshold, app.settings.quality / 100);
+      if (L.inlay && L.inlay.dataUrl) {
+        const preview = await loadPreviewData(L.inlay.dataUrl);
+        L.inlay.imageData = preview.imageData;
+        L.inlay.width = preview.width;
+        L.inlay.height_px = preview.height_px;
+        L.inlay.mask = await maskFromDataUrl(L.inlay.dataUrl, app.settings.alphaThreshold, app.settings.quality / 100);
+      }
+    }
+
+    syncSettingsToUI();
+    toast(`Loaded project: ${file.name}`, "success");
+    app.maxCompleted = 4;
+    setTimeout(() => goToStep(4), 350);
+  } catch (err) {
+    toast("Couldn't read project: " + err.message, "error");
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  STEP 2 — settings
+// ═══════════════════════════════════════════════
+const cardWidthInput = document.getElementById("card_width");
+const cardHeightInput = document.getElementById("card_height");
+const lockProportionsInput = document.getElementById("lock_proportions");
+const lockProportionsBtn = document.getElementById("lock_proportions_btn");
+const swapDimensionsBtn = document.getElementById("swap_dimensions_btn");
+const referencePngReadout = document.getElementById("reference_png_readout");
+const referenceDpiInput = document.getElementById("reference_dpi_input");
+const referenceDpiReadout = document.getElementById("reference_dpi_readout");
+const dimensionStatus = document.getElementById("dimension_status");
+const sizeHelperDropzone = document.getElementById("size_helper_dropzone");
+const sizeHelperFile = document.getElementById("size_helper_file");
+const sizeHelperFootnote = document.getElementById("size_helper_footnote");
+
+const SIZE_PRESETS = {
+  business_card: { width: 85.725, height: 53.975, label: "US Business Card" },
+  "50x50": { width: 50, height: 50, label: "50 × 50" },
+  "100x100": { width: 100, height: 100, label: "100 × 100" },
+  "235x235": { width: 235, height: 235, label: "235 × 235" }
+};
+
+function formatMm(v) {
+  return `${parseFloat(v.toFixed(3)).toString()} mm`;
+}
+
+function detectPreset(width, height) {
+  for (const [key, preset] of Object.entries(SIZE_PRESETS)) {
+    if (Math.abs(width - preset.width) < 0.001 && Math.abs(height - preset.height) < 0.001) return key;
+  }
+  return "custom";
+}
+
+function updateDimensionReadouts() {
+  referencePngReadout.textContent = app.settings.referencePng ? "Reference PNG ready" : "Drop or click to load PNG";
+  sizeHelperFootnote.textContent = app.settings.referencePng
+    ? app.settings.referencePng
+    : "Optional: use pixel dimensions plus DPI to set width and height automatically.";
+  sizeHelperFootnote.style.color = app.settings.referencePng ? "var(--success)" : "var(--text-muted)";
+  referenceDpiInput.value = app.settings.referenceDpi || "";
+  referenceDpiReadout.textContent = app.settings.referenceDpi ? `${app.settings.referenceDpi} DPI` : "";
+  const isCustom = !SIZE_PRESETS[app.settings.sizePreset] || app.settings.sizePreset === "custom";
+  const presetLabel = SIZE_PRESETS[app.settings.sizePreset]?.label || "Custom";
+  dimensionStatus.textContent = isCustom
+    ? "Custom size"
+    : `${presetLabel} · ${formatMm(app.settings.cardWidth)} × ${formatMm(app.settings.cardHeight)}`;
+  lockProportionsBtn.classList.toggle("active", lockProportionsInput.checked);
+  lockProportionsBtn.setAttribute("aria-pressed", String(lockProportionsInput.checked));
+  lockProportionsBtn.setAttribute("title", lockProportionsInput.checked ? "Unlock proportions" : "Lock proportions");
+}
+
+function setSizePreset(presetKey, custom = false) {
+  document.querySelectorAll("#size_preset_pills .pill").forEach(p => {
+    p.classList.toggle("active", !custom && p.dataset.preset === presetKey);
+  });
+  app.settings.sizePreset = custom ? "custom" : presetKey;
+  updateDimensionReadouts();
+}
+
+function setDimensions(width, height, opts = {}) {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+  app.settings.cardWidth = width;
+  app.settings.cardHeight = height;
+  app.settings.aspectRatio = width / height;
+  cardWidthInput.value = width.toFixed(3).replace(/\.?0+$/, "");
+  cardHeightInput.value = height.toFixed(3).replace(/\.?0+$/, "");
+  const presetKey = opts.preset || detectPreset(width, height);
+  setSizePreset(presetKey, opts.custom ?? presetKey === "custom");
+}
+
+function applyDimensionInput(source) {
+  const width = parseFloat(cardWidthInput.value);
+  const height = parseFloat(cardHeightInput.value);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+  if (lockProportionsInput.checked) {
+    const ratio = app.settings.aspectRatio || (app.settings.cardWidth / app.settings.cardHeight) || 1;
+    if (source === "width") {
+      const nextHeight = width / ratio;
+      app.settings.cardWidth = width;
+      app.settings.cardHeight = nextHeight;
+      cardHeightInput.value = nextHeight.toFixed(3).replace(/\.?0+$/, "");
+    } else {
+      const nextWidth = height * ratio;
+      app.settings.cardHeight = height;
+      app.settings.cardWidth = nextWidth;
+      cardWidthInput.value = nextWidth.toFixed(3).replace(/\.?0+$/, "");
+    }
+  } else {
+    app.settings.cardWidth = width;
+    app.settings.cardHeight = height;
+    app.settings.aspectRatio = width / height;
+  }
+  const presetKey = detectPreset(app.settings.cardWidth, app.settings.cardHeight);
+  setSizePreset(presetKey, presetKey === "custom");
+}
+
+cardWidthInput.addEventListener("input", () => applyDimensionInput("width"));
+cardHeightInput.addEventListener("input", () => applyDimensionInput("height"));
+lockProportionsBtn.addEventListener("click", () => {
+  lockProportionsInput.checked = !lockProportionsInput.checked;
+  lockProportionsInput.dispatchEvent(new Event("change"));
+});
+lockProportionsInput.addEventListener("change", () => {
+  app.settings.lockAspect = lockProportionsInput.checked;
+  if (app.settings.lockAspect && app.settings.cardHeight > 0) {
+    app.settings.aspectRatio = app.settings.cardWidth / app.settings.cardHeight;
+  }
+  updateDimensionReadouts();
+});
+swapDimensionsBtn.addEventListener("click", () => {
+  const nextWidth = app.settings.cardHeight;
+  const nextHeight = app.settings.cardWidth;
+  const presetKey = detectPreset(nextWidth, nextHeight);
+  setDimensions(nextWidth, nextHeight, { preset: presetKey, custom: presetKey === "custom" });
+  toast(`Swapped dimensions: ${formatMm(nextWidth)} × ${formatMm(nextHeight)}`, "success");
+});
+referenceDpiInput.addEventListener("input", () => {
+  const dpi = parseFloat(referenceDpiInput.value);
+  app.settings.referenceDpi = Number.isFinite(dpi) && dpi > 0 ? dpi : null;
+  if (app.settings.referenceDpi && app.settings.referencePngWidthPx) {
+    const widthMm = (app.settings.referencePngWidthPx / app.settings.referenceDpi) * 25.4;
+    const heightMm = (app.settings.referencePngHeightPx / app.settings.referenceDpi) * 25.4;
+    const presetKey = detectPreset(widthMm, heightMm);
+    setDimensions(widthMm, heightMm, { preset: presetKey, custom: presetKey === "custom" });
+  }
+  updateDimensionReadouts();
+});
+
+document.querySelectorAll("#size_preset_pills .pill").forEach(p => {
+  p.addEventListener("click", () => {
+    const preset = SIZE_PRESETS[p.dataset.preset];
+    setDimensions(preset.width, preset.height, { preset: p.dataset.preset, custom: false });
+  });
+});
+
+sizeHelperDropzone.addEventListener("click", () => sizeHelperFile.click());
+sizeHelperDropzone.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sizeHelperFile.click(); }
+});
+sizeHelperFile.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (f) handleSizeHelperFile(f);
+});
+["dragenter","dragover"].forEach(ev =>
+  sizeHelperDropzone.addEventListener(ev, e => { e.preventDefault(); sizeHelperDropzone.classList.add("drag-over"); })
+);
+["dragleave","drop"].forEach(ev =>
+  sizeHelperDropzone.addEventListener(ev, e => { e.preventDefault(); sizeHelperDropzone.classList.remove("drag-over"); })
+);
+sizeHelperDropzone.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleSizeHelperFile(f);
+});
+
+async function readImageDimensions(file) {
+  const dataUrl = await fileToDataUrl(file);
+  const img = await loadImage(dataUrl);
+  return {
+    widthPx: img.naturalWidth || img.width,
+    heightPx: img.naturalHeight || img.height
+  };
+}
+
+async function handleSizeHelperFile(file) {
+  try {
+    if (!/\.png$/i.test(file.name) && file.type !== "image/png") {
+      throw new Error("Only PNG files are supported in the size helper.");
+    }
+    const { widthPx, heightPx } = await readImageDimensions(file);
+    const dpi = app.settings.referenceDpi || 300;
+    if (!Number.isFinite(dpi) || dpi <= 0) throw new Error("DPI must be a positive number.");
+    const widthMm = (widthPx / dpi) * 25.4;
+    const heightMm = (heightPx / dpi) * 25.4;
+    app.settings.referencePng = `${file.name} · ${widthPx} × ${heightPx}px`;
+    app.settings.referencePngWidthPx = widthPx;
+    app.settings.referencePngHeightPx = heightPx;
+    app.settings.referenceDpi = dpi;
+    const presetKey = detectPreset(widthMm, heightMm);
+    setDimensions(widthMm, heightMm, { preset: presetKey, custom: presetKey === "custom" });
+    toast(`Size updated from PNG DPI: ${formatMm(widthMm)} × ${formatMm(heightMm)}`, "success");
+  } catch (err) {
+    toast("PNG sizing failed: " + err.message, "error");
+  } finally {
+    sizeHelperFile.value = "";
+  }
+}
+
+document.querySelectorAll("#nozzle_pills .pill").forEach(p => {
+  p.addEventListener("click", () => {
+    document.querySelectorAll("#nozzle_pills .pill").forEach(x => x.classList.remove("active"));
+    p.classList.add("active");
+    app.settings.nozzle = parseFloat(p.dataset.val);
+    app.settings.layerHeight = Math.max(0.05, Math.min(0.32, app.settings.nozzle / 2));
+    layerSlider.value = app.settings.layerHeight.toFixed(2);
+    layerValue.textContent = app.settings.layerHeight.toFixed(2) + " mm";
+    document.getElementById("preview_nozzle").textContent = app.settings.nozzle.toFixed(1);
+    renderLayers();
+  });
+});
+
+const layerSlider = document.getElementById("layer_slider");
+const layerValue = document.getElementById("layer_value");
+const layerTicks = document.getElementById("layer_ticks");
+const thresholdSlider = document.getElementById("threshold_slider");
+const thresholdValue = document.getElementById("threshold_value");
+
+function renderTicks(slider, container, values, fmt) {
+  if (!container) return;
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const thumb = 14;
+  container.innerHTML = values.map(v => {
+    const norm = (v - min) / (max - min);
+    const left = `calc(${(norm * 100).toFixed(3)}% + ${((0.5 - norm) * thumb).toFixed(2)}px)`;
+    return `<span style="left:${left}">${fmt(v)}</span>`;
+  }).join("");
+}
+
+renderTicks(layerSlider, layerTicks, [0.05, 0.12, 0.20, 0.28, 0.32], v => v.toFixed(2));
+layerSlider.addEventListener("input", () => {
+  const v = parseFloat(layerSlider.value);
+  app.settings.layerHeight = v;
+  layerValue.textContent = v.toFixed(2) + " mm";
+  renderLayers();
+});
+
+thresholdSlider.addEventListener("input", () => {
+  const v = parseInt(thresholdSlider.value, 10);
+  app.settings.alphaThreshold = v;
+  thresholdValue.textContent = v;
+  app.layers.forEach(L => {
+    L.mask = null;
+    if (L.inlay) L.inlay.mask = null;
+  });
+});
+
+const qualitySlider = document.getElementById("quality_slider");
+const qualityPct = document.getElementById("quality_pct");
+const qualityHint = document.getElementById("quality_hint");
+const qualityTicks = document.getElementById("quality_ticks");
+
+function qualityTier(v) {
+  if (v >= 90) return ["Maximum", "largest files, slowest to generate."];
+  if (v >= 65) return ["High",    "balanced detail — good for most prints."];
+  if (v >= 40) return ["Medium",  "compact files, visible facets on curves."];
+  return        ["Draft",    "smallest files, fastest, clearly faceted."];
+}
+
+qualitySlider.addEventListener("input", () => {
+  const v = parseInt(qualitySlider.value);
+  app.settings.quality = v;
+  qualityPct.textContent = v;
+  const [label, hint] = qualityTier(v);
+  qualityHint.innerHTML = `<strong style="color:var(--accent);font-weight:700;">${label}</strong> · ${hint}`;
+});
+
+renderTicks(qualitySlider, qualityTicks, [10, 25, 50, 75, 100], v => v + "%");
+
+function syncSettingsToUI() {
+  lockProportionsInput.checked = app.settings.lockAspect !== false;
+  cardWidthInput.value = app.settings.cardWidth;
+  cardHeightInput.value = app.settings.cardHeight;
+  const presetKey = detectPreset(app.settings.cardWidth, app.settings.cardHeight);
+  setSizePreset(presetKey, presetKey === "custom");
+  document.querySelectorAll("#nozzle_pills .pill").forEach(p => {
+    p.classList.toggle("active", parseFloat(p.dataset.val) === app.settings.nozzle);
+  });
+  layerSlider.value = app.settings.layerHeight;
+  layerValue.textContent = app.settings.layerHeight.toFixed(2) + " mm";
+  thresholdSlider.value = app.settings.alphaThreshold;
+  thresholdValue.textContent = app.settings.alphaThreshold;
+  qualitySlider.value = app.settings.quality;
+  qualityPct.textContent = app.settings.quality;
+  const [label, hint] = qualityTier(app.settings.quality);
+  qualityHint.innerHTML = `<strong style="color:var(--accent);font-weight:700;">${label}</strong> · ${hint}`;
+  document.getElementById("preview_nozzle").textContent = app.settings.nozzle.toFixed(1);
+  updateDimensionReadouts();
+}
+
+// ═══════════════════════════════════════════════
+//  Mask loading — port of load_alpha_mask + load_mask
+// ═══════════════════════════════════════════════
+
+// Load any image source (File, dataURL, blob URL) into an HTMLImageElement.
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Image decode failed"));
+    img.src = src;
+  });
+}
+
+// Read a File as a base64 data URL so it can be embedded in .3dp.
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Render an image into a Uint8Array boolean mask via alpha threshold.
+// quality: 0.1–1.0 downscale factor (matches Python PIL.LANCZOS path).
+// cornerPins: force 4 corners True so every layer shares the XY bounding box.
+async function loadMaskFromImage(img, threshold, quality, cornerPins) {
+  // Pick an output size. SVGs report 0×0 if no intrinsic size — fall back.
+  let w = img.naturalWidth || img.width || 0;
+  let h = img.naturalHeight || img.height || 0;
+  if (!w || !h) {
+    // Default raster size for unsized SVGs (matches Python svg_raster_width=857).
+    w = 857;
+    h = Math.round(857 * (app.settings.cardHeight / app.settings.cardWidth));
+  }
+  const targetW = Math.max(8, Math.round(w * quality));
+  const targetH = Math.max(8, Math.round(h * quality));
+
+  const cv = document.createElement("canvas");
+  cv.width = targetW;
+  cv.height = targetH;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.clearRect(0, 0, targetW, targetH);
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  const px = ctx.getImageData(0, 0, targetW, targetH).data;
+  const mask = new Uint8Array(targetW * targetH);
+  for (let i = 0, j = 3; i < mask.length; i++, j += 4) {
+    mask[i] = px[j] >= threshold ? 1 : 0;
+  }
+  if (cornerPins) {
+    mask[0] = 1;
+    mask[targetW - 1] = 1;
+    mask[(targetH - 1) * targetW] = 1;
+    mask[targetH * targetW - 1] = 1;
+  }
+  return { mask, cols: targetW, rows: targetH };
+}
+
+async function maskFromDataUrl(dataUrl, threshold, quality, cornerPins = true) {
+  const img = await loadImage(dataUrl);
+  return loadMaskFromImage(img, threshold, quality, cornerPins);
+}
+
+// ═══════════════════════════════════════════════
+//  Inlay mask — port of make_inlay_masks
+// ═══════════════════════════════════════════════
+
+function flipMask(maskObj, flipX, flipY) {
+  if (!flipX && !flipY) return maskObj;
+  const { mask, cols, rows } = maskObj;
+  const out = new Uint8Array(mask.length);
+  for (let r = 0; r < rows; r++) {
+    const srcR = flipY ? (rows - 1 - r) : r;
+    for (let c = 0; c < cols; c++) {
+      const srcC = flipX ? (cols - 1 - c) : c;
+      out[r * cols + c] = mask[srcR * cols + srcC];
+    }
+  }
+  return { mask: out, cols, rows };
+}
+
+function resampleMask(src, srcW, srcH, dstW, dstH) {
+  // Nearest-neighbor resample of a boolean Uint8Array mask.
+  const out = new Uint8Array(dstW * dstH);
+  const sx = srcW / dstW;
+  const sy = srcH / dstH;
+  for (let y = 0; y < dstH; y++) {
+    const srcY = Math.min(srcH - 1, Math.floor(y * sy));
+    for (let x = 0; x < dstW; x++) {
+      const srcX = Math.min(srcW - 1, Math.floor(x * sx));
+      out[y * dstW + x] = src[srcY * srcW + srcX];
+    }
+  }
+  return out;
+}
+
+function makeInlayMasks(base, fg) {
+  let { mask: bM, cols: bw, rows: bh } = base;
+  let { mask: fM, cols: fw, rows: fh } = fg;
+  if (bw !== fw || bh !== fh) {
+    fM = resampleMask(fM, fw, fh, bw, bh);
+    fw = bw; fh = bh;
+  }
+  const bg = new Uint8Array(bM.length);
+  for (let i = 0; i < bM.length; i++) bg[i] = bM[i] && !fM[i] ? 1 : 0;
+  return {
+    bg: { mask: bg, cols: bw, rows: bh },
+    fg: { mask: fM, cols: bw, rows: bh }
+  };
+}
+
+// ═══════════════════════════════════════════════
+//  Mesh builder — port of mask_to_stl
+//  Returns Float32Array of triangle vertices [v0xyz, v1xyz, v2xyz, ...]
+//  triangles_count = arr.length / 9
+// ═══════════════════════════════════════════════
+
+function maskToTriangles(maskObj, widthMm, heightMm, extrudeMm, zOffsetMm, anchor) {
+  const { mask, cols, rows } = maskObj;
+  const pixelW = widthMm / cols;
+  const pixelH = heightMm / rows;
+  const zBot = zOffsetMm;
+  const zTop = zOffsetMm + extrudeMm;
+
+  // Pre-count opaque pixels and exposed sides to size the buffer exactly.
+  let solidCount = 0;
+  let sideCount = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!mask[r * cols + c]) continue;
+      solidCount++;
+      if (c === 0 || !mask[r * cols + (c - 1)]) sideCount++;
+      if (c === cols - 1 || !mask[r * cols + (c + 1)]) sideCount++;
+      if (r === rows - 1 || !mask[(r + 1) * cols + c]) sideCount++;
+      if (r === 0 || !mask[(r - 1) * cols + c]) sideCount++;
+    }
+  }
+
+  // 4 tris per opaque pixel (top + bottom) + 2 tris per exposed side.
+  let triCount = solidCount * 4 + sideCount * 2;
+  const wantAnchor = anchor && zOffsetMm > 0;
+  if (wantAnchor) triCount += 12;
+
+  if (triCount === 0) {
+    throw new Error("No opaque pixels in image — nothing to extrude.");
+  }
+
+  const out = new Float32Array(triCount * 9);
+  let p = 0;
+  const push = (a, b, c) => {
+    out[p++] = a[0]; out[p++] = a[1]; out[p++] = a[2];
+    out[p++] = b[0]; out[p++] = b[1]; out[p++] = b[2];
+    out[p++] = c[0]; out[p++] = c[1]; out[p++] = c[2];
+  };
+
+  if (wantAnchor) {
+    const ax = 0, ay = 0, az0 = 0, az1 = 0.001;
+    const bx = widthMm, by = heightMm;
+    push([ax,ay,az1],[bx,ay,az1],[bx,by,az1]);
+    push([ax,ay,az1],[bx,by,az1],[ax,by,az1]);
+    push([ax,ay,az0],[bx,by,az0],[bx,ay,az0]);
+    push([ax,ay,az0],[ax,by,az0],[bx,by,az0]);
+    push([ax,ay,az0],[bx,ay,az0],[bx,ay,az1]);
+    push([ax,ay,az0],[bx,ay,az1],[ax,ay,az1]);
+    push([ax,by,az0],[ax,by,az1],[bx,by,az1]);
+    push([ax,by,az0],[bx,by,az1],[bx,by,az0]);
+    push([ax,ay,az0],[ax,ay,az1],[ax,by,az1]);
+    push([ax,ay,az0],[ax,by,az1],[ax,by,az0]);
+    push([bx,ay,az0],[bx,by,az1],[bx,ay,az1]);
+    push([bx,ay,az0],[bx,by,az0],[bx,by,az1]);
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!mask[r * cols + c]) continue;
+
+      const x0 = c * pixelW;
+      const x1 = (c + 1) * pixelW;
+      // Y flip: image row 0 → high Y (top of card)
+      const y0 = (rows - 1 - r) * pixelH;
+      const y1 = (rows - r) * pixelH;
+
+      // Top
+      push([x0,y0,zTop],[x1,y0,zTop],[x1,y1,zTop]);
+      push([x0,y0,zTop],[x1,y1,zTop],[x0,y1,zTop]);
+      // Bottom
+      push([x0,y0,zBot],[x1,y1,zBot],[x1,y0,zBot]);
+      push([x0,y0,zBot],[x0,y1,zBot],[x1,y1,zBot]);
+
+      if (c === 0 || !mask[r * cols + (c - 1)]) {
+        push([x0,y0,zBot],[x0,y0,zTop],[x0,y1,zTop]);
+        push([x0,y0,zBot],[x0,y1,zTop],[x0,y1,zBot]);
+      }
+      if (c === cols - 1 || !mask[r * cols + (c + 1)]) {
+        push([x1,y0,zBot],[x1,y1,zTop],[x1,y0,zTop]);
+        push([x1,y0,zBot],[x1,y1,zBot],[x1,y1,zTop]);
+      }
+      if (r === rows - 1 || !mask[(r + 1) * cols + c]) {
+        push([x0,y0,zBot],[x1,y0,zTop],[x0,y0,zTop]);
+        push([x0,y0,zBot],[x1,y0,zBot],[x1,y0,zTop]);
+      }
+      if (r === 0 || !mask[(r - 1) * cols + c]) {
+        push([x0,y1,zBot],[x0,y1,zTop],[x1,y1,zTop]);
+        push([x0,y1,zBot],[x1,y1,zTop],[x1,y1,zBot]);
+      }
+    }
+  }
+
+  return out;
+}
+
+// ═══════════════════════════════════════════════
+//  3MF writer — port of core/exporter.py
+// ═══════════════════════════════════════════════
+const _CONTENT_TYPES_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+</Types>`;
+
+const _RELS_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Target="/3D/3dmodel.model" Id="rel0"
+    Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+</Relationships>`;
+
+function dedupVertices(triangles) {
+  // triangles: Float32Array with 9 floats per tri.
+  // Output: { verts: Float32Array(M*3), idx: Uint32Array(N*3) }
+  const triCount = triangles.length / 9;
+  const map = new Map();
+  const verts = [];
+  const idx = new Uint32Array(triCount * 3);
+  // Round to 6 decimals for dedup (matches Python np.round(..., 6)).
+  const round6 = v => Math.round(v * 1e6) / 1e6;
+  for (let i = 0; i < triCount * 3; i++) {
+    const x = round6(triangles[i * 3]);
+    const y = round6(triangles[i * 3 + 1]);
+    const z = round6(triangles[i * 3 + 2]);
+    const key = x + "," + y + "," + z;
+    let id = map.get(key);
+    if (id === undefined) {
+      id = verts.length / 3;
+      verts.push(x, y, z);
+      map.set(key, id);
+    }
+    idx[i] = id;
+  }
+  return { verts: new Float32Array(verts), idx };
+}
+
+// Build XML as an array of ~1MB string chunks so no single string approaches
+// V8's max-string length (~256M UTF-16 chars). Chunks are assembled via the
+// Blob constructor, which has no string-size limit.
+function meshToObjectChunks(objId, name, triangles, chunks) {
+  const { verts, idx } = dedupVertices(triangles);
+  const safe = String(name).replace(/"/g, "'").replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+  chunks.push(`  <object id="${objId}" name="${safe}" type="model">\n    <mesh>\n      <vertices>\n`);
+
+  const BATCH = 20000;
+  let buf = "";
+  let n = 0;
+  for (let i = 0; i < verts.length; i += 3) {
+    buf += `        <vertex x="${verts[i].toFixed(6)}" y="${verts[i+1].toFixed(6)}" z="${verts[i+2].toFixed(6)}"/>\n`;
+    if (++n >= BATCH) { chunks.push(buf); buf = ""; n = 0; }
+  }
+  if (buf) { chunks.push(buf); buf = ""; n = 0; }
+
+  chunks.push(`      </vertices>\n      <triangles>\n`);
+
+  for (let i = 0; i < idx.length; i += 3) {
+    buf += `        <triangle v1="${idx[i]}" v2="${idx[i+1]}" v3="${idx[i+2]}"/>\n`;
+    if (++n >= BATCH) { chunks.push(buf); buf = ""; n = 0; }
+  }
+  if (buf) chunks.push(buf);
+
+  chunks.push(`      </triangles>\n    </mesh>\n  </object>\n`);
+}
+
+async function write3MF(namedMeshes) {
+  if (typeof JSZip === "undefined") throw new Error("JSZip failed to load — check your network.");
+  const xmlChunks = [
+    `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US"\n  xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n  <resources>\n`
+  ];
+  namedMeshes.forEach(({ name, triangles }, i) => {
+    meshToObjectChunks(i + 1, name, triangles, xmlChunks);
+  });
+  xmlChunks.push(`  </resources>\n  <build>\n`);
+  namedMeshes.forEach((_, i) => {
+    xmlChunks.push(`    <item objectid="${i + 1}"/>\n`);
+  });
+  xmlChunks.push(`  </build>\n</model>`);
+
+  const modelBlob = new Blob(xmlChunks, { type: "application/vnd.ms-package.3dmanufacturing-3dmodel+xml" });
+
+  const zip = new JSZip();
+  zip.file("[Content_Types].xml", _CONTENT_TYPES_XML);
+  zip.folder("_rels").file(".rels", _RELS_XML);
+  zip.folder("3D").file("3dmodel.model", modelBlob);
+  return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+}
+
+// ═══════════════════════════════════════════════
+//  Generate & download
+// ═══════════════════════════════════════════════
+async function ensureMask(layer) {
+  if (!layer.dataUrl) return null;
+  const q = app.settings.quality / 100;
+  const fx = !!layer.flipX, fy = !!layer.flipY;
+  if (!layer.mask ||
+      layer.mask.threshold !== app.settings.alphaThreshold ||
+      layer.mask.quality !== q ||
+      layer.mask.flipX !== fx ||
+      layer.mask.flipY !== fy) {
+    const raw = await maskFromDataUrl(layer.dataUrl, app.settings.alphaThreshold, q);
+    const m = flipMask(raw, fx, fy);
+    m.threshold = app.settings.alphaThreshold;
+    m.quality = q;
+    m.flipX = fx;
+    m.flipY = fy;
+    layer.mask = m;
+  }
+  return layer.mask;
+}
+
+async function ensureInlayMask(layer) {
+  const inlay = layer && layer.inlay;
+  if (!inlay || !inlay.dataUrl) return null;
+  const q = app.settings.quality / 100;
+  const fx = !!layer.flipX, fy = !!layer.flipY;
+  if (!inlay.mask ||
+      inlay.mask.threshold !== app.settings.alphaThreshold ||
+      inlay.mask.quality !== q ||
+      inlay.mask.flipX !== fx ||
+      inlay.mask.flipY !== fy) {
+    const raw = await maskFromDataUrl(inlay.dataUrl, app.settings.alphaThreshold, q);
+    const m = flipMask(raw, fx, fy);
+    m.threshold = app.settings.alphaThreshold;
+    m.quality = q;
+    m.flipX = fx;
+    m.flipY = fy;
+    inlay.mask = m;
+  }
+  return inlay.mask;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+function safeName(s) {
+  return String(s).replace(/[^a-z0-9._-]+/gi, "_").slice(0, 64) || "layer";
+}
+
+function timestampToken() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+}
+
+function buildProjectFileStem(stamp = timestampToken()) {
+  return `${sanitizeProjectName(app.projectName) || "png23d_project"}_${stamp}`;
+}
+
+function buildProjectData() {
+  return {
+    version: 1,
+    projectName: app.projectName,
+    settings: { ...app.settings },
+    layers: app.layers.map(L => ({
+      name: L.name,
+      color: L.color,
+      thickness: L.thickness,
+      file: L.file,
+      dataUrl: L.dataUrl,
+      flipX: !!L.flipX,
+      flipY: !!L.flipY,
+      inlay: L.inlay ? {
+        color: L.inlay.color,
+        file: L.inlay.file,
+        dataUrl: L.inlay.dataUrl
+      } : null
+    }))
+  };
+}
+
+function formatEta(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "almost done";
+  const s = Math.max(1, Math.round(seconds));
+  if (s < 60) return `~${s}s remaining`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return r ? `~${m}m ${r}s remaining` : `~${m}m remaining`;
+}
+
+const exportProgressEl = document.getElementById("export_progress");
+const exportProgressFill = document.getElementById("export_progress_fill");
+const exportProgressLabel = document.getElementById("export_progress_label");
+const exportProgressEta = document.getElementById("export_progress_eta");
+
+let _exportStartedAt = 0;
+function showExportProgress(label) {
+  _exportStartedAt = performance.now();
+  generateBtn.style.display = "none";
+  exportProgressEl.hidden = false;
+  exportProgressFill.style.width = "0%";
+  exportProgressLabel.textContent = label || "Generating…";
+  exportProgressEta.textContent = "estimating…";
+}
+function setExportProgress(done, total, label) {
+  const ratio = total > 0 ? Math.min(1, done / total) : 0;
+  exportProgressFill.style.width = `${(ratio * 100).toFixed(1)}%`;
+  if (label) exportProgressLabel.textContent = label;
+  const elapsed = (performance.now() - _exportStartedAt) / 1000;
+  if (ratio > 0.02 && ratio < 1) {
+    const eta = (elapsed / ratio) * (1 - ratio);
+    exportProgressEta.textContent = formatEta(eta);
+  } else if (ratio >= 1) {
+    exportProgressEta.textContent = "finishing…";
+  }
+}
+function hideExportProgress() {
+  exportProgressEl.hidden = true;
+  generateBtn.style.display = "";
+}
+const yieldFrame = () => new Promise(r => setTimeout(r, 0));
+
+async function generate() {
+  const ready = app.layers.filter(L => L.dataUrl);
+  if (!ready.length) {
+    toast("Add a PNG to at least one layer before generating.", "error");
+    return;
+  }
+  generateBtn.disabled = true;
+  showExportProgress("Generating layers…");
+
+  try {
+    // Compute z offsets bottom-up (UI is top→bottom of print, so reverse).
+    const reversed = [...app.layers].reverse();
+    let z = 0;
+    const meta = reversed.map(L => {
+      const entry = { layer: L, z };
+      z += L.thickness;
+      return entry;
+    });
+
+    // Weight each layer by the number of triangulation passes (base + optional inlay)
+    // plus a small fixed cost for the final 3MF zip step so the bar always lands at 100%.
+    const layerWork = meta
+      .filter(({ layer }) => layer.dataUrl)
+      .map(({ layer }) => 1 + (layer.inlay && layer.inlay.dataUrl ? 1 : 0));
+    const totalWork = layerWork.reduce((s, n) => s + n, 0) + 1;
+    let workDone = 0;
+
+    const meshes = []; // { name, color, triangles, fileName }
+    let layerIdx = 0;
+    const totalLayers = layerWork.length;
+
+    for (const { layer: L, z: zOff } of meta) {
+      if (!L.dataUrl) continue;
+      layerIdx++;
+      setExportProgress(workDone, totalWork, `Layer ${layerIdx} of ${totalLayers} · ${L.name}`);
+      await yieldFrame();
+
+      const baseMask = await ensureMask(L);
+      const inlayMask = await ensureInlayMask(L);
+
+      let bgMask = baseMask;
+      let fgMask = null;
+      if (inlayMask) {
+        const sep = makeInlayMasks(baseMask, inlayMask);
+        bgMask = sep.bg;
+        fgMask = sep.fg;
+      }
+
+      const tris = maskToTriangles(bgMask, app.settings.cardWidth, app.settings.cardHeight,
+                                   L.thickness, zOff, /*anchor=*/false);
+      const safe = safeName(L.name);
+      meshes.push({
+        name: L.name,
+        color: L.color,
+        triangles: tris,
+        fileName: `${safe}.stl`
+      });
+      workDone++;
+      setExportProgress(workDone, totalWork);
+      await yieldFrame();
+
+      if (fgMask) {
+        const inlayTris = maskToTriangles(fgMask, app.settings.cardWidth, app.settings.cardHeight,
+                                          L.thickness, zOff, false);
+        meshes.push({
+          name: L.name + " — Inlay",
+          color: L.inlay.color,
+          triangles: inlayTris,
+          fileName: `${safe}_inlay.stl`
+        });
+        workDone++;
+        setExportProgress(workDone, totalWork);
+        await yieldFrame();
+      }
+    }
+
+    if (!meshes.length) throw new Error("No meshes to export.");
+
+    setExportProgress(workDone, totalWork, "Packaging 3MF…");
+    await yieldFrame();
+
+    const stamp = timestampToken();
+    const fileStem = buildProjectFileStem(stamp);
+    const modelBlob = await write3MF(meshes);
+    const projectBlob = new Blob([JSON.stringify(buildProjectData(), null, 2)], { type: "application/json" });
+    workDone++;
+    setExportProgress(workDone, totalWork, "Downloading…");
+    downloadBlob(modelBlob, `${fileStem}.3mf`);
+    downloadBlob(projectBlob, `${fileStem}.3dp`);
+
+    const totalTris = meshes.reduce((s, m) => s + m.triangles.length / 9, 0);
+    toast(`Downloaded 3MF + 3DP · ${meshes.length} mesh${meshes.length === 1 ? "" : "es"} · ${totalTris.toLocaleString()} triangles`, "success");
+    hideExportProgress();
+    generateBtn.textContent = "✓ Downloaded";
+    setTimeout(() => { generateBtn.textContent = "Download 3MF + 3DP"; generateBtn.disabled = false; }, 1800);
+  } catch (err) {
+    console.error(err);
+    toast("Generate failed: " + err.message, "error");
+    hideExportProgress();
+    generateBtn.textContent = "Download 3MF + 3DP";
+    generateBtn.disabled = false;
+  }
+}
+
+generateBtn.addEventListener("click", generate);
+
+// ═══════════════════════════════════════════════
+//  Save .3dp
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  STEP 4 — layers
+// ═══════════════════════════════════════════════
+const layerList = document.getElementById("layer_list");
+const layerFileInput = document.getElementById("layer_file_input");
+const previewCanvas = document.getElementById("preview_canvas");
+
+layerFileInput.addEventListener("change", async e => {
+  const f = e.target.files[0];
+  if (f && app.fileTargetCb) await app.fileTargetCb(f);
+  layerFileInput.value = "";
+  app.fileTargetCb = null;
+});
+
+function pickFile(cb) {
+  app.fileTargetCb = cb;
+  layerFileInput.click();
+}
+
+async function loadPreviewData(dataUrl) {
+  const img = await loadImage(dataUrl);
+  const off = document.createElement("canvas");
+  off.width = img.naturalWidth || img.width;
+  off.height = img.naturalHeight || img.height;
+  const offCtx = off.getContext("2d");
+  offCtx.drawImage(img, 0, 0);
+  return {
+    imageData: offCtx.getImageData(0, 0, off.width, off.height),
+    width: off.width,
+    height_px: off.height
+  };
+}
+
+async function attachFileToLayer(L, file) {
+  let dataUrl, preview;
+  try {
+    dataUrl = await fileToDataUrl(file);
+    preview = await loadPreviewData(dataUrl);
+  } catch (err) {
+    console.error("attachFileToLayer read failed", err);
+    toast("Couldn't read " + file.name + (err && err.message ? ": " + err.message : ""), "error");
+    return;
+  }
+  L.file = file.name;
+  L.dataUrl = dataUrl;
+  L.imageData = preview.imageData;
+  L.width = preview.width;
+  L.height_px = preview.height_px;
+  L.mask = null;
+  L._topCanvasCache = null;
+  renderLayers();
+  renderPreview();
+}
+
+async function attachFileToInlay(L, file) {
+  if (!L.inlay) L.inlay = { color: defaultInlayColor(L.color), file: null, dataUrl: null, mask: null };
+  let dataUrl, preview;
+  try {
+    dataUrl = await fileToDataUrl(file);
+    preview = await loadPreviewData(dataUrl);
+  } catch (err) {
+    console.error("attachFileToInlay read failed", err);
+    toast("Couldn't read " + file.name + (err && err.message ? ": " + err.message : ""), "error");
+    return;
+  }
+  L.inlay.file = file.name;
+  L.inlay.dataUrl = dataUrl;
+  L.inlay.imageData = preview.imageData;
+  L.inlay.width = preview.width;
+  L.inlay.height_px = preview.height_px;
+  L.inlay.mask = null;
+  L._topCanvasCache = null;
+  renderLayers();
+  renderPreview();
+}
+
+function drawLayerSnapThumb(L, cv) {
+  const S = 46;
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext("2d");
+  // Checkered bg
+  for (let y = 0; y < S; y += 8) for (let x = 0; x < S; x += 8) {
+    ctx.fillStyle = ((x + y) / 8) % 2 === 0 ? "#1a1a1a" : "#252525";
+    ctx.fillRect(x, y, 8, 8);
+  }
+  if (!L.imageData) {
+    ctx.fillStyle = L.color + "cc";
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.font = `bold 18px 'JetBrains Mono', monospace`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText((L.name[0] || "?").toUpperCase(), S/2, S/2);
+    return;
+  }
+  // Aspect-fit the artwork into the thumb at 90% scale so the bounding box doesn't crop it.
+  const inset = S * 0.9;
+  const iw = L.width, ih = L.height_px;
+  const scale = Math.min(inset / iw, inset / ih);
+  const dw = iw * scale, dh = ih * scale;
+  const dx = (S - dw) / 2, dy = (S - dh) / 2;
+
+  const base = document.createElement("canvas");
+  base.width = iw; base.height = ih;
+  base.getContext("2d").putImageData(L.imageData, 0, 0);
+
+  // Tinted artwork: fill region with layer color, then keep only pixels where artwork is opaque.
+  const layerSwatch = document.createElement("canvas");
+  layerSwatch.width = S; layerSwatch.height = S;
+  const lc = layerSwatch.getContext("2d");
+  lc.fillStyle = L.color;
+  lc.fillRect(dx, dy, dw, dh);
+  lc.globalCompositeOperation = "destination-in";
+  lc.drawImage(base, dx, dy, dw, dh);
+
+  ctx.save();
+  if (L.flipX || L.flipY) {
+    ctx.translate(L.flipX ? S : 0, L.flipY ? S : 0);
+    ctx.scale(L.flipX ? -1 : 1, L.flipY ? -1 : 1);
+  }
+  ctx.drawImage(layerSwatch, 0, 0);
+
+  // Inlay overlay (same fit + scale so it stays aligned with the layer art).
+  if (L.inlay && L.inlay.imageData) {
+    const ib = document.createElement("canvas");
+    ib.width = L.inlay.width; ib.height = L.inlay.height_px;
+    ib.getContext("2d").putImageData(L.inlay.imageData, 0, 0);
+    const tmp = document.createElement("canvas");
+    tmp.width = S; tmp.height = S;
+    const tc = tmp.getContext("2d");
+    tc.fillStyle = L.inlay.color;
+    tc.fillRect(dx, dy, dw, dh);
+    tc.globalCompositeOperation = "destination-in";
+    tc.drawImage(ib, dx, dy, dw, dh);
+    ctx.drawImage(tmp, 0, 0);
+  }
+  ctx.restore();
+}
+
+function renderLayers() {
+  layerList.innerHTML = "";
+  app.layers.forEach((L) => {
+    const row = document.createElement("div");
+    row.className = "layer-item";
+    row.draggable = true;
+    row.dataset.id = L.id;
+    const hasInlay = !!L.inlay;
+    const artLabel = L.file ? (L.file.length > 12 ? L.file.slice(0, 10) + "…" : L.file) : "+ artwork";
+    const inlayFileLabel = hasInlay ? (L.inlay.file || "Drop or click") : "";
+
+    row.innerHTML = `
+      <div class="layer-header">
+        <canvas class="layer-snap-thumb" title="Click or drop to set artwork"></canvas>
+        <div class="layer-artwork-drop ${L.dataUrl ? 'has-file' : ''}" title="Click or drop PNG/SVG">${artLabel}</div>
+        <input class="layer-name" value="${escapeAttr(L.name)}">
+        <div class="layer-header-actions">
+          <input type="color" class="layer-color" value="${L.color}" title="Layer color">
+          <button class="layer-flip-btn flip-x ${L.flipX ? 'active' : ''}" title="Flip horizontally (for back-side prints)" aria-label="Flip horizontally">⇆</button>
+          <button class="layer-flip-btn flip-y ${L.flipY ? 'active' : ''}" title="Flip vertically (for back-side prints)" aria-label="Flip vertically">⇅</button>
+          <button class="add-inlay-btn ${hasInlay ? 'active' : ''}" title="Add a coplanar inlay">${hasInlay ? '− Inlay' : '+ Inlay'}</button>
+          <button class="layer-remove" title="Remove layer"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><polyline points="1,4 15,4"></polyline><path d="M3,4l1,9a2,2 0 0,0 2,2h4a2,2 0 0,0 2-2l1-9"></path><path d="M6,4V2h4v2"></path></svg></button>
+        </div>
+      </div>
+      <div class="layer-thickness-row">
+        <span class="thickness-label">Thickness</span>
+        <input class="layer-thickness" type="number" min="0.05" step="0.05" value="${L.thickness.toFixed(2)}" title="mm">
+        <span class="thickness-label">mm</span>
+        <span class="thickness-sep">/</span>
+        <input class="layer-printlayers" type="number" min="1" step="1" value="${Math.max(1, Math.round(L.thickness / app.settings.layerHeight))}" title="Print layers">
+        <span class="thickness-label">layers</span>
+      </div>
+      ${hasInlay ? `
+        <div class="layer-inlay">
+          <span class="inlay-label">Inlay</span>
+          <input type="color" class="inlay-color" value="${L.inlay.color}" title="Inlay color">
+          <div class="inlay-file ${L.inlay.file ? 'has-file' : ''}" title="Click to upload inlay PNG">${inlayFileLabel}</div>
+          <button class="inlay-remove" title="Remove inlay">×</button>
+        </div>
+      ` : ""}
+    `;
+
+    // Snap thumb
+    const snapCv = row.querySelector(".layer-snap-thumb");
+    drawLayerSnapThumb(L, snapCv);
+    snapCv.addEventListener("click", () => pickFile(f => attachFileToLayer(L, f)));
+    ["dragenter","dragover"].forEach(ev =>
+      snapCv.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); snapCv.style.borderColor = "var(--cyan)"; })
+    );
+    ["dragleave","drop"].forEach(ev =>
+      snapCv.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); snapCv.style.borderColor = ""; })
+    );
+    snapCv.addEventListener("drop", e => {
+      const f = e.dataTransfer?.files[0];
+      if (f) attachFileToLayer(L, f);
+    });
+
+    // Artwork drop zone
+    const artDrop = row.querySelector(".layer-artwork-drop");
+    artDrop.addEventListener("click", () => pickFile(f => attachFileToLayer(L, f)));
+    ["dragenter","dragover"].forEach(ev =>
+      artDrop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); artDrop.classList.add("drag-over"); })
+    );
+    ["dragleave","drop"].forEach(ev =>
+      artDrop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); artDrop.classList.remove("drag-over"); })
+    );
+    artDrop.addEventListener("drop", e => {
+      const f = e.dataTransfer?.files[0];
+      if (f) attachFileToLayer(L, f);
+    });
+
+    row.querySelector(".layer-name").addEventListener("input", e => { L.name = e.target.value; });
+    row.querySelector(".layer-color").addEventListener("input", e => {
+      L.color = e.target.value;
+      L._topCanvasCache = null;
+      drawLayerSnapThumb(L, snapCv);
+      renderPreview();
+    });
+    row.querySelector(".layer-thickness").addEventListener("input", e => {
+      const v = parseFloat(e.target.value);
+      if (Number.isFinite(v) && v > 0) {
+        L.thickness = v;
+        const pl = row.querySelector(".layer-printlayers");
+        if (pl) pl.value = Math.max(1, Math.round(v / app.settings.layerHeight));
+        updateSummary(); renderPreview();
+      }
+    });
+    row.querySelector(".layer-printlayers").addEventListener("input", e => {
+      const n = parseInt(e.target.value);
+      if (Number.isFinite(n) && n >= 1) {
+        L.thickness = Math.round(n * app.settings.layerHeight * 100) / 100;
+        const th = row.querySelector(".layer-thickness");
+        if (th) th.value = L.thickness.toFixed(2);
+        updateSummary(); renderPreview();
+      }
+    });
+    row.querySelector(".layer-remove").addEventListener("click", () => {
+      app.layers = app.layers.filter(x => x.id !== L.id);
+      renderLayers(); renderPreview();
+    });
+    row.querySelector(".add-inlay-btn").addEventListener("click", () => {
+      if (L.inlay) L.inlay = null;
+      else L.inlay = { color: defaultInlayColor(L.color), file: null, dataUrl: null, mask: null };
+      renderLayers(); renderPreview();
+    });
+    row.querySelector(".flip-x").addEventListener("click", () => {
+      L.flipX = !L.flipX;
+      L.mask = null;
+      if (L.inlay) L.inlay.mask = null;
+      renderLayers(); renderPreview();
+    });
+    row.querySelector(".flip-y").addEventListener("click", () => {
+      L.flipY = !L.flipY;
+      L.mask = null;
+      if (L.inlay) L.inlay.mask = null;
+      renderLayers(); renderPreview();
+    });
+
+    if (hasInlay) {
+      row.querySelector(".inlay-color").addEventListener("input", e => {
+        L.inlay.color = e.target.value;
+        L._topCanvasCache = null;
+        renderPreview();
+      });
+      row.querySelector(".inlay-file").addEventListener("click", () => pickFile(f => attachFileToInlay(L, f)));
+      row.querySelector(".inlay-remove").addEventListener("click", () => {
+        L.inlay = null; renderLayers(); renderPreview();
+      });
+      const inlaySlot = row.querySelector(".inlay-file");
+      ["dragenter","dragover"].forEach(ev =>
+        inlaySlot.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); inlaySlot.style.borderColor = "var(--cyan)"; })
+      );
+      ["dragleave","drop"].forEach(ev =>
+        inlaySlot.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); inlaySlot.style.borderColor = ""; })
+      );
+      inlaySlot.addEventListener("drop", e => {
+        const f = e.dataTransfer?.files[0];
+        if (f) attachFileToInlay(L, f);
+      });
+    }
+
+    // Drag to reorder
+    row.addEventListener("dragstart", e => {
+      row.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", L.id);
+    });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
+    row.addEventListener("dragover", e => { e.preventDefault(); row.classList.add("drag-over"); });
+    row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+    row.addEventListener("drop", e => {
+      e.preventDefault();
+      row.classList.remove("drag-over");
+      const fromId = +e.dataTransfer.getData("text/plain");
+      if (!fromId || fromId === L.id) return;
+      const fromIdx = app.layers.findIndex(x => x.id === fromId);
+      const toIdx   = app.layers.findIndex(x => x.id === L.id);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = app.layers.splice(fromIdx, 1);
+      app.layers.splice(toIdx, 0, moved);
+      renderLayers(); renderPreview();
+    });
+
+    layerList.appendChild(row);
+  });
+
+  updateSummary();
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+}
+
+function shiftHue(hex, deg) {
+  const h = hex.replace("#","");
+  const r = parseInt(h.substring(0,2),16)/255;
+  const g = parseInt(h.substring(2,4),16)/255;
+  const b = parseInt(h.substring(4,6),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let hh, s, l = (max+min)/2;
+  if (max === min) { hh = 0; s = 0; }
+  else {
+    const d = max-min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch (max) {
+      case r: hh = ((g-b)/d + (g<b?6:0)); break;
+      case g: hh = ((b-r)/d + 2); break;
+      default: hh = ((r-g)/d + 4);
+    }
+    hh /= 6;
+  }
+  hh = (hh + deg/360) % 1;
+  s = Math.max(s, 0.5);
+  l = Math.min(Math.max(l, 0.4), 0.6);
+  const hue2rgb = (p,q,t) => {
+    if (t<0) t+=1; if (t>1) t-=1;
+    if (t<1/6) return p+(q-p)*6*t;
+    if (t<1/2) return q;
+    if (t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  const q = l<0.5 ? l*(1+s) : l+s-l*s;
+  const p = 2*l-q;
+  const nr = Math.round(hue2rgb(p,q,hh+1/3)*255);
+  const ng = Math.round(hue2rgb(p,q,hh)*255);
+  const nb = Math.round(hue2rgb(p,q,hh-1/3)*255);
+  return "#" + [nr,ng,nb].map(x => x.toString(16).padStart(2,"0")).join("");
+}
+
+function zRange(idx) {
+  let zTop = app.layers.reduce((s, l) => s + l.thickness, 0);
+  for (let i = 0; i < idx; i++) zTop -= app.layers[i].thickness;
+  const zBot = zTop - app.layers[idx].thickness;
+  return `${zBot.toFixed(2)} → ${zTop.toFixed(2)}`;
+}
+
+function updateSummary() {
+  const total = app.layers.reduce((s, l) => s + l.thickness, 0);
+  const n = app.layers.length;
+  const el = id => document.getElementById(id);
+  const fmt3 = v => parseFloat(v.toFixed(3)).toString();
+  if (el("ps_card")) el("ps_card").textContent = `${fmt3(app.settings.cardWidth)} × ${fmt3(app.settings.cardHeight)} mm`;
+  if (el("preview_nozzle")) el("preview_nozzle").textContent = app.settings.nozzle.toFixed(1);
+  if (el("ps_layerh")) el("ps_layerh").textContent = app.settings.layerHeight.toFixed(2);
+  if (el("ps_alpha")) el("ps_alpha").textContent = app.settings.alphaThreshold;
+  if (el("ps_quality")) el("ps_quality").textContent = app.settings.quality + "%";
+  if (el("preview_height")) el("preview_height").textContent = total.toFixed(2);
+  if (el("preview_count")) el("preview_count").textContent = n;
+}
+
+function hexToRgb(hex) {
+  const clean = hex.replace("#", "");
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16)
+  ];
+}
+
+// ─── Three.js 3D Preview ──────────────────────────
+let _threeRenderer = null, _threeScene = null, _threeCamera = null;
+let _threeAzimuth = 0.8, _threePitch = 0.5;
+let _threeCenter = null;
+let _threeCamDist = 150;
+let _threeMeshes = [];
+let _previewRefreshTimer = null;
+
+let _threeMissingWarned = false;
+function _threeAvailable() {
+  if (typeof THREE === "undefined") {
+    if (!_threeMissingWarned) {
+      _threeMissingWarned = true;
+      console.warn("THREE.js failed to load — 3D preview disabled, but generation still works.");
+    }
+    return false;
+  }
+  return true;
+}
+
+function _threeInit() {
+  if (_threeRenderer) return;
+  if (!_threeAvailable()) return;
+  const canvas = document.getElementById("preview_canvas");
+  if (!canvas) return;
+  if (!_threeCenter) _threeCenter = new THREE.Vector3();
+
+  _threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  _threeRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  _threeRenderer.setClearColor(0x111318);
+
+  _threeScene = new THREE.Scene();
+  _threeCamera = new THREE.PerspectiveCamera(45, 4, 0.1, 5000);
+
+  _threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(50, 120, 80);
+  _threeScene.add(sun);
+  const fill = new THREE.DirectionalLight(0x8899ff, 0.28);
+  fill.position.set(-60, 30, -40);
+  _threeScene.add(fill);
+
+  // Orbit drag
+  let drag = false, lx = 0, ly = 0;
+  canvas.addEventListener("mousedown", e => { drag = true; lx = e.clientX; ly = e.clientY; e.preventDefault(); });
+  window.addEventListener("mousemove", e => {
+    if (!drag) return;
+    _threeAzimuth -= (e.clientX - lx) * 0.008;
+    _threePitch = Math.max(-1.45, Math.min(1.45, _threePitch - (e.clientY - ly) * 0.008));
+    lx = e.clientX; ly = e.clientY;
+    _threeUpdateCamera();
+  });
+  window.addEventListener("mouseup", () => { drag = false; });
+  let t0 = null;
+  canvas.addEventListener("touchstart", e => { t0 = e.touches[0]; e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("touchmove", e => {
+    if (!t0) return;
+    const t = e.touches[0];
+    _threeAzimuth -= (t.clientX - t0.clientX) * 0.008;
+    _threePitch = Math.max(-1.45, Math.min(1.45, _threePitch - (t.clientY - t0.clientY) * 0.008));
+    t0 = t; _threeUpdateCamera(); e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener("touchend", () => { t0 = null; });
+
+  new ResizeObserver(_threeResize).observe(canvas.parentElement);
+  _threeResize();
+
+  (function loop() { requestAnimationFrame(loop); if (_threeRenderer && _threeScene && _threeCamera) _threeRenderer.render(_threeScene, _threeCamera); })();
+}
+
+function _threeResize() {
+  if (!_threeRenderer || !_threeCamera) return;
+  const canvas = document.getElementById("preview_canvas");
+  if (!canvas || !canvas.parentElement) return;
+  const w = canvas.parentElement.clientWidth || 760;
+  const h = 240;
+  _threeRenderer.setSize(w, h, false);
+  canvas.style.width = "100%";
+  canvas.style.height = h + "px";
+  _threeCamera.aspect = w / h;
+  _threeCamera.updateProjectionMatrix();
+}
+
+function _threeUpdateCamera() {
+  if (!_threeCamera) return;
+  const { x: cx, y: cy, z: cz } = _threeCenter;
+  const d = _threeCamDist;
+  _threeCamera.position.set(
+    cx + d * Math.sin(_threeAzimuth) * Math.cos(_threePitch),
+    cy + d * Math.sin(_threePitch),
+    cz + d * Math.cos(_threeAzimuth) * Math.cos(_threePitch)
+  );
+  _threeCamera.lookAt(_threeCenter);
+}
+
+function _threeClearMeshes() {
+  for (const m of _threeMeshes) {
+    _threeScene.remove(m);
+    m.geometry.dispose();
+    m.material.dispose();
+  }
+  _threeMeshes = [];
+}
+
+function _trisToGeo(tris) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(tris, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function _addMesh(tris, hexColor) {
+  const [r,g,b] = hexToRgb(hexColor);
+  const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(r/255, g/255, b/255), flatShading: true });
+  const mesh = new THREE.Mesh(_trisToGeo(tris), mat);
+  mesh.rotation.x = -Math.PI / 2;
+  _threeScene.add(mesh);
+  _threeMeshes.push(mesh);
+}
+
+function schedulePreviewRefresh() {
+  clearTimeout(_previewRefreshTimer);
+  _previewRefreshTimer = setTimeout(_doPreviewRefresh, 120);
+}
+
+async function _doPreviewRefresh() {
+  if (!app.layers.length) return;
+  if (!_threeAvailable()) return;
+  if (!_threeRenderer) _threeInit();
+  if (!_threeRenderer) return;
+  _threeClearMeshes();
+
+  const Q = 0.14;
+  const cardW = app.settings.cardWidth;
+  const cardH = app.settings.cardHeight;
+  const reversed = [...app.layers].reverse();
+  let z = 0;
+
+  for (const L of reversed) {
+    if (!L.dataUrl) { z += L.thickness; continue; }
+    try {
+      const rawBase = await maskFromDataUrl(L.dataUrl, app.settings.alphaThreshold, Q, true);
+      const baseMask = flipMask(rawBase, !!L.flipX, !!L.flipY);
+      let bgMask = baseMask, fgMask = null;
+      if (L.inlay && L.inlay.dataUrl) {
+        const rawInlay = await maskFromDataUrl(L.inlay.dataUrl, app.settings.alphaThreshold, Q, false);
+        const inlayMask = flipMask(rawInlay, !!L.flipX, !!L.flipY);
+        const sep = makeInlayMasks(baseMask, inlayMask);
+        bgMask = sep.bg; fgMask = sep.fg;
+      }
+      try { _addMesh(maskToTriangles(bgMask, cardW, cardH, L.thickness, z, false), L.color); } catch(_) {}
+      if (fgMask) {
+        try { _addMesh(maskToTriangles(fgMask, cardW, cardH, L.thickness, z, false), L.inlay.color); } catch(_) {}
+      }
+    } catch(_) {}
+    z += L.thickness;
+  }
+
+  // Auto-fit camera to bounding box
+  if (_threeMeshes.length) {
+    const box = new THREE.Box3();
+    for (const m of _threeMeshes) { m.updateMatrixWorld(true); box.expandByObject(m); }
+    const center = new THREE.Vector3(), size = new THREE.Vector3();
+    box.getCenter(center); box.getSize(size);
+    _threeCenter.copy(center);
+    // Fit model into the canvas accounting for FOV + aspect — diagonal of the
+    // largest axis pair drives the bound so the bottom isn't clipped at any orbit angle.
+    const diag = Math.hypot(size.x, size.z, size.y);
+    const fovV = (45 * Math.PI) / 180;
+    const aspect = (_threeCamera && _threeCamera.aspect) || 4;
+    const fovH = 2 * Math.atan(Math.tan(fovV / 2) * aspect);
+    const fitV = (diag / 2) / Math.tan(fovV / 2);
+    const fitH = (diag / 2) / Math.tan(fovH / 2);
+    _threeCamDist = Math.max(fitV, fitH) * 1.25;
+    _threeUpdateCamera();
+  }
+}
+
+function renderPreview() {
+  const hasLayers = app.layers.length > 0;
+  const canvas = document.getElementById("preview_canvas");
+  const emptyEl = document.getElementById("preview_empty");
+  if (canvas) canvas.style.display = hasLayers ? "block" : "none";
+  if (emptyEl) emptyEl.style.display = hasLayers ? "none" : "flex";
+  if (hasLayers) {
+    if (!_threeRenderer) _threeInit();
+    else _threeResize();
+    schedulePreviewRefresh();
+  }
+  updateSummary();
+}
+
+const palette = ["#000000","#ffffff"];
+function defaultInlayColor(layerHex) {
+  return (layerHex || "").toLowerCase() === "#ffffff" ? "#000000" : "#ffffff";
+}
+document.getElementById("add_layer_btn").addEventListener("click", () => {
+  const i = app.layers.length;
+  app.layers.push({
+    id: app.nextId++,
+    name: `L${i + 1}`,
+    color: palette[i % palette.length],
+    thickness: 0.20,
+    file: null,
+    dataUrl: null,
+    mask: null,
+    inlay: null,
+    flipX: false,
+    flipY: false
+  });
+  renderLayers();
+  renderPreview();
+});
+
+// ═══════════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════════
+(function init(){
+  syncSettingsToUI();
+  renderLayers();
+  renderPreview();
+})();
+</script>
+
+</body>
+</html>

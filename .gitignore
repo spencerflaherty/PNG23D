@@ -13,6 +13,7 @@ venv/
 
 # Generated STL output (keep directory placeholders)
 output/*.stl
+output/full_plate/*.stl
 
 # User-provided input PNGs (keep .gitkeep)
 input/*.png

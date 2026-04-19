@@ -1,6 +1,0 @@
-# Arrayed print-bed STLs land here:
-#   plate_layer1.stl
-#   plate_layer2.stl
-#   plate_layer3.stl
-#
-# Run: python array_cards.py --batch
