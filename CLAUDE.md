@@ -26,8 +26,18 @@ open index.html
 # or serve via any static server (e.g.):
 python3 -m http.server 8000   # → http://localhost:8000
 
-# Deploy: push to GitHub, enable Pages on main branch (root)
+# Deploy: commit + push to main. GitHub Pages is already enabled (main / root).
+git push origin main
 ```
+
+## Deployment
+
+- **Repo:** `spencerflaherty/PNG23D` (renamed from `multicolor-3d-stl-generator`).
+- **Pages source:** `main` branch, `/` (root). Configured via `gh api -X PUT repos/spencerflaherty/PNG23D/pages`.
+- **GitHub default URL:** https://spencerflaherty.github.io/PNG23D/
+- **Custom domain:** `png23d.spencerflaherty.com` (CNAME record at GoDaddy points to `spencerflaherty.github.io`; `CNAME` file in repo root pins it on the Pages side). **Do not delete `CNAME`** — removing it unbinds the custom domain.
+- **HTTPS enforcement** must be re-enabled via `gh api -X PUT repos/spencerflaherty/PNG23D/pages -F https_enforced=true` once Let's Encrypt finishes provisioning the cert for the custom domain (initial attach fails with 404 "certificate does not exist yet" until DNS resolves).
+- `spencerflaherty.com` itself is hosted on Squarespace (apex A records → `198.185.159.x` / `198.49.23.x`); GitHub only owns the `png23d` subdomain.
 
 ## Architecture
 
