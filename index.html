@@ -1502,6 +1502,100 @@ body.classic-theme .layer-inlay { border-color: rgba(255, 255, 255, 0.22); }
   font-weight: 700;
 }
 
+.help-quicknav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 26px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.help-quicknav-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-right: 4px;
+}
+
+.help-quicknav a {
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.help-quicknav a:hover {
+  text-decoration: underline;
+}
+
+.help-callout {
+  background: var(--surface2);
+  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+  margin: 14px 0;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.7;
+  border-radius: 4px;
+}
+
+.help-callout strong {
+  color: var(--accent);
+}
+
+.help-section p + p,
+.help-section p + ul,
+.help-section ul + p {
+  margin-top: 10px;
+}
+
+.help-section strong {
+  color: var(--accent);
+}
+
+.help-faq-item {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.help-faq-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.help-faq-q {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.help-faq-q::before {
+  content: "Q: ";
+  color: var(--text-muted);
+}
+
+.help-faq-a {
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.help-faq-a::before {
+  content: "A: ";
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-right: 2px;
+}
+
 .preview-panel {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -2087,48 +2181,211 @@ body.classic-theme .layer-inlay { border-color: rgba(255, 255, 255, 0.22); }
     </div>
     <main class="help-modal-main">
       <h2 class="help-modal-title">Help &amp; Documentation</h2>
-      <p class="help-modal-subtitle">The workflow is short: name the project, set physical size, choose print settings, build the layer stack, then download the 3MF and 3DP together.</p>
+      <p class="help-modal-subtitle">Everything you need to go from a stack of PNGs to a multi-color 3D print.</p>
 
-      <section class="help-section">
+      <nav class="help-quicknav" aria-label="Help sections">
+        <span class="help-quicknav-label">Jump to:</span>
+        <a href="#help-what">What is this?</a>
+        <a href="#help-need">What you need</a>
+        <a href="#help-flow">Workflow</a>
+        <a href="#help-p1">Start</a>
+        <a href="#help-p2">Size</a>
+        <a href="#help-p3">Settings</a>
+        <a href="#help-p4">Layers</a>
+        <a href="#help-gen">Generate</a>
+        <a href="#help-slicer">Slicer</a>
+        <a href="#help-faq">FAQ</a>
+      </nav>
+
+      <section class="help-section" id="help-what">
+        <h3 class="help-section-title">What is this?</h3>
+        <p>PNG23D turns flat images into a multi-color 3D-printable object — most often a business card, but any flat print works. You upload one or more transparent-background PNGs. Each PNG becomes a <strong>layer</strong> in the print, with its own color and its own thickness, stacked like slices of a cake.</p>
+        <p>The app hands you back a <code>.3mf</code> file that any modern slicer can open and print.</p>
+        <div class="help-callout">
+          <strong>Privacy:</strong> Everything runs in your browser. No files are uploaded to a server. No account. Close the tab and nothing is kept except the files you downloaded.
+        </div>
+      </section>
+
+      <section class="help-section" id="help-need">
+        <h3 class="help-section-title">What you need</h3>
+        <ul class="help-step-list">
+          <li><strong>Transparent-background PNGs</strong> — one per color. SVGs also work.</li>
+          <li><strong>A slicer that opens <code>.3mf</code></strong> — free options: Bambu Studio, OrcaSlicer, PrusaSlicer. Simplify3D also works.</li>
+          <li><strong>A 3D printer.</strong> Multi-color systems (Bambu AMS, Prusa MMU, Mosaic Palette) print this automatically. Single-color printers can still do it — the slicer inserts a pause at each color change and prompts you to swap filament.</li>
+        </ul>
+      </section>
+
+      <section class="help-section" id="help-flow">
+        <h3 class="help-section-title">The workflow</h3>
+        <ul class="help-step-list">
+          <li><strong>1. Start</strong> — name the project.</li>
+          <li><strong>2. Size &amp; DPI</strong> — tell the app how big the finished print should be in mm.</li>
+          <li><strong>3. Print Settings</strong> — pick your nozzle and layer height.</li>
+          <li><strong>4. Arrange Layers</strong> — upload a PNG for each layer, set color and thickness, reorder as needed.</li>
+          <li><strong>5. Generate</strong> — click the button, download the <code>.3mf</code> (print file) and <code>.3dp</code> (project save).</li>
+          <li><strong>6. Slice &amp; print</strong> — open the <code>.3mf</code> in your slicer, assign filament colors, print.</li>
+        </ul>
+      </section>
+
+      <section class="help-section" id="help-p1">
         <h3 class="help-section-title">Page 1 — Start</h3>
         <ul class="help-step-list">
-          <li>Type the project name and start a new project, or drop in an existing <code>.3dp</code> file.</li>
-          <li>The project name drives the downloaded filenames, so keep it short and descriptive.</li>
+          <li><strong>Project name</strong> — required. Drives the downloaded filenames (e.g. <code>SpencerCard_20260419_143012.3mf</code>). Keep it short and descriptive.</li>
+          <li><strong>New Project</strong> — starts a blank project with zero layers.</li>
+          <li><strong>Drop <code>.3dp</code> Project File</strong> — reload a previously saved project. Every PNG and setting comes back exactly as you left it.</li>
         </ul>
       </section>
 
-      <section class="help-section">
+      <section class="help-section" id="help-p2">
         <h3 class="help-section-title">Page 2 — Size &amp; DPI</h3>
+        <p>This is the real-world physical size of the finished print, in millimeters.</p>
         <ul class="help-step-list">
-          <li>Pick a preset or enter exact width and height in millimeters.</li>
-          <li>Drop a reference PNG into the Reference PNG area and set its DPI to auto-calculate physical size from pixels.</li>
-          <li>Use Lock Proportions if you want width and height to stay linked while editing.</li>
+          <li><strong>Presets</strong> — US business card (85.725 × 53.975mm), 50×50, 100×100, 235×235mm (full Ender-3 bed).</li>
+          <li><strong>Card width / height</strong> — type exact numbers in mm. The default is a landscape US business card.</li>
+          <li><strong>Lock Proportions</strong> — keeps the aspect ratio when you edit one dimension.</li>
+          <li><strong>Reference PNG + DPI</strong> — drop a PNG here and enter its DPI (300 is typical for print artwork). The app calculates physical width and height from the pixel dimensions. Use this when you've designed artwork at a known print resolution.</li>
         </ul>
       </section>
 
-      <section class="help-section">
+      <section class="help-section" id="help-p3">
         <h3 class="help-section-title">Page 3 — Print Settings</h3>
         <ul class="help-step-list">
-          <li>Choose the nozzle first. Layer height defaults to half the selected nozzle, then you can fine-tune it.</li>
-          <li>Quality controls mesh density. Lower values generate faster and keep files smaller while iterating.</li>
+          <li><strong>Nozzle diameter</strong> — match your printer's physical nozzle. Most stock printers are 0.4mm. Smaller nozzles capture more detail but print slower.</li>
+          <li><strong>Layer height</strong> — defaults to half the nozzle (0.2mm for a 0.4mm nozzle). Lower = smoother vertical walls, more print layers, longer print.</li>
+          <li><strong>Alpha threshold (0–255)</strong> — the cutoff that decides whether a pixel counts as "on." 128 (50% opacity) is the default. Lower it to keep faint / feathered edges; raise it to clip them cleanly.</li>
+          <li><strong>Quality (10–100%)</strong> — how finely the PNG is voxelized before meshing. 100% uses every pixel; 50% is ~4× lighter (quality has a quadratic effect on triangle count). Drop this while iterating, bump it up for final export.</li>
         </ul>
       </section>
 
-      <section class="help-section">
+      <section class="help-section" id="help-p4">
         <h3 class="help-section-title">Page 4 — Arrange Layers</h3>
+        <p>The core step. Each card in the stack is one layer of the print.</p>
         <ul class="help-step-list">
-          <li>Top of the list is the top of the print. Drag layers to reorder them.</li>
-          <li>Each layer card controls name, color, thickness, threshold, artwork, and optional inlay artwork.</li>
-          <li>Start with a thicker base layer and keep accent layers thinner unless they need more body.</li>
+          <li><strong>Top of list = top of the print.</strong> Drag cards by their body to reorder.</li>
+          <li><strong>Upload artwork</strong> — drop a PNG (or SVG) into the card's dropzone. Transparent pixels = empty space; opaque pixels = filled with this layer's color.</li>
+          <li><strong>Name</strong> — cosmetic label that appears in the slicer object list.</li>
+          <li><strong>Color</strong> — cosmetic in the 3MF; most slicers respect it when auto-assigning filament.</li>
+          <li><strong>Thickness</strong> — set by <strong>mm</strong> (physical) or <strong>layers</strong> (count of print layers). Changing one updates the other automatically. A typical base layer is 0.8mm; accent layers 0.2–0.4mm.</li>
+          <li><strong>Flip X / Y (⇆ / ⇅)</strong> — mirror the layer horizontally or vertically. Needed for double-sided prints so the back face reads correctly.</li>
+          <li><strong>+ Inlay</strong> — optional second PNG that <em>cuts through</em> the base layer at the same height, filled with a different color. Think of a colored pad with a logo inset into it.</li>
+          <li><strong>Trash icon</strong> — removes the layer.</li>
+          <li><strong>Live thumbnail</strong> — shows the current layer + inlay composite. Updates as you change artwork, color, or flip toggles.</li>
+          <li><strong>3D preview</strong> — drag to orbit, drag down to tilt under the model. Auto-fits to whatever you've built so far.</li>
         </ul>
       </section>
 
-      <section class="help-section">
-        <h3 class="help-section-title">Downloads</h3>
+      <section class="help-section" id="help-gen">
+        <h3 class="help-section-title">Generate &amp; download</h3>
+        <p>Clicking <strong>Generate</strong> produces two files, downloaded together:</p>
         <ul class="help-step-list">
-          <li>The final button downloads both files: the print-ready <code>.3mf</code> and the matching <code>.3dp</code> project.</li>
-          <li>Both files use the project name plus a timestamp so each download stays unique.</li>
+          <li><code>projectname_YYYYMMDD_HHMMSS.<strong>3mf</strong></code> — the print file. Open this in your slicer.</li>
+          <li><code>projectname_YYYYMMDD_HHMMSS.<strong>3dp</strong></code> — the saved project. Drop it onto Page 1 later to edit or hand to a collaborator.</li>
         </ul>
+        <p>A progress bar shows which layer is building plus an estimated time remaining. Complex designs at 100% quality can take a minute or two — the preview stays responsive while it works.</p>
+      </section>
+
+      <section class="help-section" id="help-slicer">
+        <h3 class="help-section-title">In your slicer</h3>
+        <ul class="help-step-list">
+          <li>Open the <code>.3mf</code>. You'll see one object per layer, already stacked at the correct heights.</li>
+          <li>Assign a filament color to each object. In Bambu Studio / Orca this is the paint-bucket icon or right-click → "Change filament."</li>
+          <li>Slice and print. On single-color printers, the slicer will insert a pause at each color change — swap filament when prompted and resume.</li>
+          <li>On multi-material printers (AMS, MMU, Palette), color changes happen automatically.</li>
+        </ul>
+      </section>
+
+      <section class="help-section" id="help-faq">
+        <h3 class="help-section-title">FAQ</h3>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Do I need a multi-color printer?</div>
+          <div class="help-faq-a">No. Any FDM printer works. Single-color printers pause at each color boundary and prompt a filament swap — the slicer handles this for you.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What slicer should I use?</div>
+          <div class="help-faq-a">Anything that opens <code>.3mf</code>. Bambu Studio and OrcaSlicer are the easiest for multi-color assignment; PrusaSlicer and Simplify3D also work.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What resolution does my PNG need to be?</div>
+          <div class="help-faq-a">Minimum ~214px wide (0.4mm per pixel at card width); recommended 857px+ (0.1mm per pixel). Lower-res PNGs look blocky when printed at millimeter scale.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Can I use SVGs?</div>
+          <div class="help-faq-a">Yes. The browser rasterizes them to a canvas at your selected quality, the same way it handles PNGs.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">My PNG has soft edges and the print looks chunky.</div>
+          <div class="help-faq-a">Lower the alpha threshold on Page 3 to keep more of the feathered edge. Or raise it if you want edges to clip cleanly. Also make sure the source PNG is high enough resolution — soft edges on a low-res file become pixel steps.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What is an inlay?</div>
+          <div class="help-faq-a">A second shape that punches through a layer at the same height, filled with a different color. Example: a pink pad with a black logo cut into it — the logo is the inlay. Use "+ Inlay" on a layer card to add one.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What's the smallest detail that will print cleanly?</div>
+          <div class="help-faq-a">Roughly 1.2mm (about 3× a 0.4mm nozzle width). Anything thinner tends to break off or not extrude reliably. Smaller nozzles can go finer but print slower.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Is anything I upload sent to a server?</div>
+          <div class="help-faq-a">No. The entire app runs in your browser. Close the tab and your files are gone except for the <code>.3mf</code> and <code>.3dp</code> you downloaded.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Browser stalled or ran out of memory.</div>
+          <div class="help-faq-a">Drop the Quality slider on Page 3. Quality has a quadratic effect on mesh size — 50% quality is ~4× lighter than 100%. Very large meshes (&gt;2M triangles) can stall a tab.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Why is my <code>.3mf</code> so big?</div>
+          <div class="help-faq-a">Every opaque pixel becomes voxel geometry. Reduce Quality, simplify the artwork (fewer fine details), or raise the alpha threshold to eliminate near-transparent pixels.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">My text prints backwards / my logo is mirrored.</div>
+          <div class="help-faq-a">Use the Flip X or Flip Y toggle on that layer's card. Common fix for double-sided prints where the back face is the mirror image of the front.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What's a <code>.3dp</code> file?</div>
+          <div class="help-faq-a">A save file. JSON with all your settings and every uploaded PNG packed in. Drop one onto Page 1 to reload the project exactly as it was.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Can I share a <code>.3dp</code> with someone else?</div>
+          <div class="help-faq-a">Yes. They'll get the exact same project, artwork included. It's a complete, self-contained file.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">The 3D preview says THREE is unavailable.</div>
+          <div class="help-faq-a">The preview uses the Three.js CDN. If that fails to load (offline, blocked, or CDN issue) the preview disables but upload, generate, and download all still work normally.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Can I run this offline?</div>
+          <div class="help-faq-a">Yes — save <code>index.html</code> to disk and open it. The only feature that requires the internet is the 3D preview (Three.js loads from a CDN).</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">Can I print this on a resin printer?</div>
+          <div class="help-faq-a">Technically yes — it's flat extruded geometry. But this app is tuned for multi-color FDM. On resin, color is irrelevant and you'd only get the combined silhouette.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">What card orientation is the default?</div>
+          <div class="help-faq-a">Landscape: 85.725mm wide × 53.975mm tall (3.375" × 2.125" — standard US business card). Change it on Page 2 if you want a different orientation or size.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q">How many layers can I stack?</div>
+          <div class="help-faq-a">No hard limit — practical ceiling is driven by browser memory and total print height. Two to five layers covers almost every real-world business-card design.</div>
+        </div>
       </section>
     </main>
   </div>
